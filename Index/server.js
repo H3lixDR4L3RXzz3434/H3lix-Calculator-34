@@ -1,3 +1,73 @@
+const { Pool } = require('pg');
+
+// Database connection using Render environment variable
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
+
+// Initialize database table if it doesn't exist
+async function initDB() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS players (
+        id VARCHAR(255) PRIMARY KEY,
+        username VARCHAR(100) NOT NULL,
+        level INT DEFAULT 1,
+        coins INT DEFAULT 0,
+        score INT DEFAULT 0,
+        data JSONB DEFAULT '{}',
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('✅ Database connected and initialized in Supabase.');
+  } catch (err) {
+    console.error('❌ Error initializing database:', err);
+  }
+}
+
+initDB();
+
+// Save or update player progress
+async function savePlayerProgress(playerId, username, level, coins, score, extraData = {}) {
+  const query = `
+    INSERT INTO players (id, username, level, coins, score, data, updated_at)
+    VALUES ($1, $2, $3, $4, $5, $6, NOW())
+    ON CONFLICT (id) 
+    DO UPDATE SET 
+      username = EXCLUDED.username,
+      level = EXCLUDED.level,
+      coins = EXCLUDED.coins,
+      score = EXCLUDED.score,
+      data = EXCLUDED.data,
+      updated_at = NOW();
+  `;
+  try {
+    await pool.query(query, [playerId, username, level, coins, score, JSON.stringify(extraData)]);
+    console.log(`💾 Progress saved for: ${username}`);
+    return true;
+  } catch (err) {
+    console.error(`❌ Error saving progress for ${playerId}:`, err);
+    return false;
+  }
+}
+
+// Load player progress
+async function getPlayerProgress(playerId) {
+  try {
+    const res = await pool.query('SELECT * FROM players WHERE id = $1', [playerId]);
+    if (res.rows.length > 0) {
+      return res.rows[0];
+    }
+    return null;
+  } catch (err) {
+    console.error(`❌ Error loading progress for ${playerId}:`, err);
+    return null;
+  }
+}
+
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
