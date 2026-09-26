@@ -806,9 +806,9 @@
       .target-canvas, .geometry-canvas { max-height: 56svh; }
     }
     body:not(.loading) { overflow-x: hidden; overflow-y: auto; }
-    .home-screen, .calculator-picker, .games-catalog, .achievements-screen, .credits-screen { overflow-x: hidden; overflow-y: auto; }
-    @media (min-width: 761px) { .home-screen, .calculator-picker, .games-catalog, .achievements-screen, .credits-screen { align-items: safe center; } }
-    @media (max-width: 760px) { .home-screen, .calculator-picker, .games-catalog, .achievements-screen, .credits-screen { align-items: start; } }
+    .home-screen, .calculator-picker, .games-catalog, .settings-screen, .achievements-screen, .credits-screen, .profile-screen, .sound-catalog, .daily-wheel-screen, .multiplayer-screen, .hazard-secret, .void-secret, .void-death-screen { max-height: 100vh; max-height: 100dvh; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
+    @media (min-width: 761px) { .home-screen, .calculator-picker, .games-catalog, .settings-screen, .achievements-screen, .credits-screen, .profile-screen, .sound-catalog, .daily-wheel-screen, .multiplayer-screen, .hazard-secret, .void-secret, .void-death-screen { align-items: safe center; } }
+    @media (max-width: 760px) { .home-screen, .calculator-picker, .games-catalog, .settings-screen, .achievements-screen, .credits-screen, .profile-screen, .sound-catalog, .daily-wheel-screen, .multiplayer-screen, .hazard-secret, .void-secret, .void-death-screen { align-items: start; } }
     body.section-open .settings-panel.open { overflow-x: hidden; overflow-y: auto; }
     .puzzle-mode { width: min(720px, calc(100vw - 32px)); margin: 0 auto; padding: 22px; border: 3px solid #2d8a76; border-radius: 10px; color: #173c39; background: #e8fff4; box-shadow: 0 7px 0 #176456; text-align: center; }
     .puzzle-mode h2 { margin: 0 0 8px; color: #176456; font-size: .9rem; }
