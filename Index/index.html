@@ -801,6 +801,8 @@
     }
     body:not(.loading) { overflow-x: hidden; overflow-y: auto; }
     .home-screen, .calculator-picker, .games-catalog, .achievements-screen, .credits-screen { overflow-x: hidden; overflow-y: auto; }
+    @media (min-width: 761px) { .home-screen, .calculator-picker, .games-catalog, .achievements-screen, .credits-screen { align-items: safe center; } }
+    @media (max-width: 760px) { .home-screen, .calculator-picker, .games-catalog, .achievements-screen, .credits-screen { align-items: start; } }
     body.section-open .settings-panel.open { overflow-x: hidden; overflow-y: auto; }
     .puzzle-mode { width: min(720px, calc(100vw - 32px)); margin: 0 auto; padding: 22px; border: 3px solid #2d8a76; border-radius: 10px; color: #173c39; background: #e8fff4; box-shadow: 0 7px 0 #176456; text-align: center; }
     .puzzle-mode h2 { margin: 0 0 8px; color: #176456; font-size: .9rem; }
@@ -1579,6 +1581,10 @@
     window.spaceRemotePlayers = [];
     window.spaceLocalPlayerId = null;
     window.spaceMultiplayerActive = false;
+    window.spaceRoomId = null;
+    window.spaceSpawnX = null;
+    window.spaceDamageFlashUntil = {};
+    window.addEventListener('space-player-damaged', event => { window.spaceDamageFlashUntil[event.detail.playerId] = performance.now() + 700; });
     window.addEventListener('space-remote-fire', event => { if (window.spaceMultiplayerActive) space.remoteBullets.push({ x: Number(event.detail.x) || 240, y: 330 }); });
     window.addEventListener('space-score-updated', event => { if (window.spaceMultiplayerActive) space.score = Math.max(space.score, Number(event.detail.score) || 0); });
     window.addEventListener('space-score-synced', event => { if (window.spaceMultiplayerActive) { space.score = Math.max(space.score, Number(event.detail.score) || 0); renderSpaceStats(); } });
@@ -1595,7 +1601,7 @@
     }
     function renderSpaceStats() { document.querySelector('#space-score').textContent = space.score; document.querySelector('#space-lives').textContent = space.lives; document.querySelector('#space-level').textContent = space.level; if (space.score >= 30) unlockAchievement('spaceRookie'); }
     function renderSpaceStatus(message) { document.querySelector('#space-status').textContent = message; }
-    function shootSpace() { const now = performance.now(); if (!space.running || space.gameOver || now - space.lastShot < (space.rapidFireUntil > now ? 90 : 240)) return; space.lastShot = now; space.bullets.push({ x: space.playerX, y: 330 }); if (space.doubleShot) space.bullets.push({ x: space.playerX + 9, y: 330 }); if (window.spaceMultiplayerActive) window.multiplayerSocket?.emit('space:fire'); playSpaceSound('shoot'); }
+    function shootSpace() { const now = performance.now(); if (!space.running || space.gameOver || now - space.lastShot < (space.rapidFireUntil > now ? 90 : 240)) return; space.lastShot = now; space.bullets.push({ x: space.playerX, y: 330 }); if (space.doubleShot) space.bullets.push({ x: space.playerX + 9, y: 330 }); if (window.spaceMultiplayerActive) window.multiplayerSocket?.emit('space:fire', space.playerX); playSpaceSound('shoot'); }
     function drawSpace() {
       const width = spaceCanvas.width, height = spaceCanvas.height;
       const palette = getComputedStyle(document.body);
@@ -1609,6 +1615,7 @@
       const remotePlayers = Array.isArray(window.spaceRemotePlayers) ? window.spaceRemotePlayers : [];
       const shipColors = ['#5bbcff', '#ff6565', '#ffd34f', '#78e08f'];
       remotePlayers.forEach((player, index) => { if (player.id === window.spaceLocalPlayerId || player.respawning) return; const x = Number(player.x) || 240; spaceContext.fillStyle = shipColors[index % shipColors.length]; spaceContext.fillRect(x - 12, 338, 24, 7); spaceContext.fillRect(x - 4, 329, 8, 10); spaceContext.font = '8px "Press Start 2P", monospace'; spaceContext.fillText(String(player.name).slice(0, 10), x, 320); spaceContext.fillText(`HP ${player.lives}`, x, 312); });
+      remotePlayers.forEach(player => { if (player.id === window.spaceLocalPlayerId || player.respawning || (window.spaceDamageFlashUntil[player.id] || 0) < performance.now()) return; spaceContext.fillStyle = '#ff5964'; spaceContext.font = '8px "Press Start 2P", monospace'; spaceContext.fillText('HIT!', Number(player.x) || 240, 300); });
       spaceContext.font = '18px "Press Start 2P", monospace'; spaceContext.textAlign = 'center';
       space.invaders.forEach(invader => { if (invader.alive) { spaceContext.fillStyle = gold; spaceContext.fillText(invader.symbol, invader.x, invader.y); } });
       space.powerUps.forEach(powerUp => { spaceContext.fillStyle = powerUp.color; spaceContext.beginPath(); spaceContext.arc(powerUp.x, powerUp.y, 10 + Math.sin(performance.now() / 120) * 2, 0, Math.PI * 2); spaceContext.fill(); spaceContext.fillStyle = dark; spaceContext.font = '10px "Press Start 2P", monospace'; spaceContext.fillText(powerUp.label, powerUp.x, powerUp.y + 3); });
@@ -1643,7 +1650,7 @@
     }
     function loseSpaceLife() { if (space.shieldHits > 0) { space.shieldHits -= 1; playSpaceSound('power'); renderSpaceStatus(`SHIELD BLOCKED THE HIT (${space.shieldHits} LEFT)`); return; } if (space.shieldUntil > performance.now()) { space.shieldUntil = 0; playSpaceSound('power'); renderSpaceStatus('SHIELD BLOCKED THE HIT'); return; } space.lives -= 1; if (window.spaceMultiplayerActive) window.multiplayerSocket?.emit('space:damage'); space.enemyBullets = []; playSpaceSound('damage'); if (space.lives <= 0) { space.running = false; space.gameOver = false; space.respawnUntil = performance.now() + 2000; renderSpaceStatus('All lives lost. Respawning in 2 seconds...'); setTimeout(() => { if (!window.spaceMultiplayerActive || !space.running && space.respawnUntil <= performance.now()) { space.lives = 5; space.respawnUntil = 0; space.running = true; space.gameOver = false; resetSpaceInvaders(); renderSpaceStats(); renderSpaceStatus('Respawned. Back to the mission!'); } }, 2000); } else { renderSpaceStatus('Ship hit. Keep moving!'); resetSpaceInvaders(); } }
     function spaceLoop() { updateSpace(); space.animation = requestAnimationFrame(spaceLoop); }
-    function startSpaceInvaders() { const status = document.querySelector('#space-powerups') || document.querySelector('#space-status').parentElement.insertBefore(Object.assign(document.createElement('p'), { id: 'space-powerups', className: 'space-powerups', textContent: 'POWER-UPS: none' }), document.querySelector('#space-status')); const rewards = JSON.parse(profileGet('calculatorSpaceRewards') || '{}'); space.rapidFireUntil = rewards.rapid ? performance.now() + 30000 : 0; space.shieldUntil = rewards.shield ? performance.now() + 180000 : 0; space.shieldHits = rewards.shield ? 10 : 0; space.doubleScoreUntil = rewards.double ? performance.now() + 30000 : 0; space.doubleShot = Boolean(rewards.doubleShot || rewards.twinCannon); space.fastShip = Boolean(rewards.fastShip); space.ship = rewards.twinCannon ? 'twin' : rewards.fastShip ? 'fast' : 'standard'; profileSet('calculatorSpaceRewards', '{}'); space.respawnUntil = 0; space.running = true; space.gameOver = false; space.lives = 5; space.level = 1; space.score = 0; space.playerX = 240; resetSpaceInvaders(); renderSpaceStats(); renderSpaceStatus(space.ship === 'twin' ? 'Twin Cannon ready.' : 'Mission ready. Destroy the invaders!'); cancelAnimationFrame(space.animation); spaceLoop(); }
+    function startSpaceInvaders() { const status = document.querySelector('#space-powerups') || document.querySelector('#space-status').parentElement.insertBefore(Object.assign(document.createElement('p'), { id: 'space-powerups', className: 'space-powerups', textContent: 'POWER-UPS: none' }), document.querySelector('#space-status')); const rewards = JSON.parse(profileGet('calculatorSpaceRewards') || '{}'); space.rapidFireUntil = rewards.rapid ? performance.now() + 30000 : 0; space.shieldUntil = rewards.shield ? performance.now() + 180000 : 0; space.shieldHits = rewards.shield ? 10 : 0; space.doubleScoreUntil = rewards.double ? performance.now() + 30000 : 0; space.doubleShot = Boolean(rewards.doubleShot || rewards.twinCannon); space.fastShip = Boolean(rewards.fastShip); space.ship = rewards.twinCannon ? 'twin' : rewards.fastShip ? 'fast' : 'standard'; profileSet('calculatorSpaceRewards', '{}'); space.respawnUntil = 0; space.running = true; space.gameOver = false; space.lives = 5; space.level = 1; space.score = 0; space.playerX = window.spaceMultiplayerActive && Number.isFinite(Number(window.spaceSpawnX)) ? Number(window.spaceSpawnX) : 240; resetSpaceInvaders(); space.remoteBullets = []; renderSpaceStats(); renderSpaceStatus(space.ship === 'twin' ? 'Twin Cannon ready.' : 'Mission ready. Destroy the invaders!'); cancelAnimationFrame(space.animation); spaceLoop(); }
     function stopSpaceInvaders() { space.running = false; cancelAnimationFrame(space.animation); spaceKeys = { left: false, right: false }; }
     function setSpaceKey(direction, value) { spaceKeys[direction] = value; }
     document.querySelector('#space-left').addEventListener('pointerdown', event => { event.currentTarget.setPointerCapture(event.pointerId); setSpaceKey('left', true); });

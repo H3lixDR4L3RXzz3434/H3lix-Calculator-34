@@ -77,6 +77,7 @@ const PORT = 34346;
 const MAX_PLAYERS = 4;
 const SPACE_MIN_X = 18;
 const SPACE_MAX_X = 462;
+const SPACE_SPAWNS = [100, 380, 220, 60];
 const PLATFORM_MAX_X = 1780;
 const PLATFORM_MAX_Y = 420;
 const rooms = new Map();
@@ -87,14 +88,33 @@ const platformRooms = new Map();
 const PLATFORM_LEVELS = ['1-1', '1-2', '2-1', '2-2'];
 
 const server = http.createServer((req, res) => {
-    const requestedPath = req.url === '/multiplayer.js' ? 'multiplayer.js' : 'index.html';
+    let pathname;
+    try {
+        pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
+    } catch {
+        res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('Bad request');
+        return;
+    }
+    const staticFiles = new Map([
+        ['/', 'index.html'],
+        ['/index.html', 'index.html'],
+        ['/multiplayer.js', 'multiplayer.js'],
+        ['/convertico-captura de pantalla-32x32 (1).ico', 'convertico-captura de pantalla-32x32 (1).ico']
+    ]);
+    const requestedPath = staticFiles.get(pathname);
+    if (!requestedPath) {
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('Not found');
+        return;
+    }
     const filePath = path.join(__dirname, requestedPath);
     fs.readFile(filePath, (err, content) => {
         if (err) {
             res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
             res.end('Not found');
         } else {
-            const contentType = requestedPath.endsWith('.js') ? 'application/javascript; charset=utf-8' : 'text/html; charset=utf-8';
+            const contentType = requestedPath.endsWith('.js') ? 'application/javascript; charset=utf-8' : requestedPath.endsWith('.ico') ? 'image/x-icon' : 'text/html; charset=utf-8';
             res.writeHead(200, { 'Content-Type': contentType });
             res.end(content, 'utf-8');
         }
@@ -266,7 +286,9 @@ io.on('connection', (socket) => {
     socket.on('space:score', score => {
         const room = spaceRooms.get(socket.data.spaceRoomId);
         if (!room) return;
-        room.score = Math.max(room.score, Math.floor(Number(score) || 0));
+        const nextScore = Math.max(0, Math.floor(Number(score) || 0));
+        if (nextScore <= room.score) return;
+        room.score = nextScore;
         io.to(`space:${room.id}`).emit('space:state', { roomId: room.id, players: [...room.players.values()], score: room.score, running: room.running });
     });
 
@@ -277,15 +299,16 @@ io.on('connection', (socket) => {
         const nextX = Number(x);
         if (!Number.isFinite(nextX)) return;
         player.x = Math.max(SPACE_MIN_X, Math.min(SPACE_MAX_X, nextX));
-        console.log(`[SPACE:MOVE] Player ${player.name} moved to x=${player.x}, room=${room.id}`);
-        emitSpaceState(room);
+        socket.to(`space:${room.id}`).emit('space:state', { roomId: room.id, players: [...room.players.values()], score: room.score, running: room.running });
     });
 
-    socket.on('space:fire', () => {
+    socket.on('space:fire', x => {
         const room = spaceRooms.get(socket.data.spaceRoomId);
         const player = room?.players.get(socket.id);
         if (!player || player.respawning) return;
-        io.to(`space:${room.id}`).emit('space:remote-fire', { playerId: socket.id, x: player.x });
+        const shotX = Number(x);
+        if (Number.isFinite(shotX)) player.x = Math.max(SPACE_MIN_X, Math.min(SPACE_MAX_X, shotX));
+        socket.to(`space:${room.id}`).emit('space:remote-fire', { playerId: socket.id, x: player.x });
     });
 
     socket.on('space:damage', () => {
@@ -312,7 +335,7 @@ io.on('connection', (socket) => {
     socket.on('platform:create', ({ name } = {}) => {
         leavePlatformRoom(socket);
         const roomId = createPlatformRoomId();
-        platformRooms.set(roomId, { id: roomId, players: new Map(), running: false, levelIndex: 0, items: createPlatformItems(0) });
+        platformRooms.set(roomId, { id: roomId, players: new Map(), running: false, levelIndex: 0, items: createPlatformItems(0), transitionPending: false, transitionTimeout: null });
         joinPlatformRoom(socket, roomId, name);
     });
 
@@ -343,24 +366,10 @@ io.on('connection', (socket) => {
         emitPlatformState(room);
     });
 
-    socket.on('platform:next-level', () => {
-        const room = platformRooms.get(socket.data.platformRoomId);
-        if (!room || !room.players.has(socket.id) || room.levelIndex >= PLATFORM_LEVELS.length - 1) return;
-        room.levelIndex += 1;
-        room.items = createPlatformItems(room.levelIndex);
-        for (const player of room.players.values()) {
-            player.x = 80;
-            player.y = 250;
-            player.vy = 0;
-            player.powerUp = null;
-        }
-        emitPlatformState(room);
-    });
-
     socket.on('platform:move', ({ x, y, vy } = {}) => {
         const room = platformRooms.get(socket.data.platformRoomId);
         const player = room?.players.get(socket.id);
-        if (!player || !room.running) return;
+        if (!player || !room.running || room.transitionPending) return;
         const nextX = Number(x);
         const nextY = Number(y);
         const nextVy = Number(vy);
@@ -368,7 +377,12 @@ io.on('connection', (socket) => {
         player.x = Math.max(20, Math.min(PLATFORM_MAX_X, nextX));
         player.y = Math.max(20, Math.min(PLATFORM_MAX_Y, nextY));
         player.vy = Math.max(-14, Math.min(14, nextVy));
-        emitPlatformState(room);
+        if (player.x >= 1680 && room.levelIndex < PLATFORM_LEVELS.length - 1) {
+            room.transitionPending = true;
+            emitPlatformState(room);
+            room.transitionTimeout = setTimeout(() => advancePlatformLevel(room), 4000);
+        }
+        socket.to(`platform:${room.id}`).emit('platform:players', [...room.players.values()]);
     });
 
     socket.on('platform:leave', () => leavePlatformRoom(socket));
@@ -395,7 +409,9 @@ function joinSpaceRoom(socket, roomId, name) {
     leaveSpaceRoom(socket);
     const room = spaceRooms.get(roomId);
     const cleanName = String(name || 'Player').trim().slice(0, 16) || 'Player';
-    room.players.set(socket.id, { id: socket.id, name: cleanName, lives: 5, respawning: false, x: 240 });
+    const occupiedSpawns = new Set([...room.players.values()].map(player => player.x));
+    const spawnX = SPACE_SPAWNS.find(x => !occupiedSpawns.has(x)) ?? SPACE_MIN_X;
+    room.players.set(socket.id, { id: socket.id, name: cleanName, lives: 5, respawning: false, x: spawnX });
     socket.data.spaceRoomId = roomId;
     socket.join(`space:${roomId}`);
     emitSpaceState(room);
@@ -403,7 +419,6 @@ function joinSpaceRoom(socket, roomId, name) {
 
 function emitSpaceState(room) {
     const playersData = [...room.players.values()];
-    console.log(`[EMIT STATE] Room ${room.id}: ${playersData.length} players, running=${room.running}, players=[${playersData.map(p => `${p.name}:${p.x}`).join(',')}]`);
     io.to(`space:${room.id}`).emit('space:state', { roomId: room.id, players: playersData, score: room.score, running: room.running });
 }
 
@@ -418,7 +433,22 @@ function joinPlatformRoom(socket, roomId, name) {
 }
 
 function emitPlatformState(room) {
-    io.to(`platform:${room.id}`).emit('platform:state', { roomId: room.id, players: [...room.players.values()], running: room.running, level: PLATFORM_LEVELS[room.levelIndex], levelIndex: room.levelIndex, items: room.items });
+    io.to(`platform:${room.id}`).emit('platform:state', { roomId: room.id, players: [...room.players.values()], running: room.running, level: PLATFORM_LEVELS[room.levelIndex], levelIndex: room.levelIndex, items: room.items, transitionPending: room.transitionPending });
+}
+
+function advancePlatformLevel(room) {
+    if (platformRooms.get(room.id) !== room || !room.transitionPending || room.levelIndex >= PLATFORM_LEVELS.length - 1) return;
+    room.levelIndex += 1;
+    room.items = createPlatformItems(room.levelIndex);
+    room.transitionPending = false;
+    room.transitionTimeout = null;
+    [...room.players.values()].forEach((player, index) => {
+        player.x = 80 + index * 90;
+        player.y = 250;
+        player.vy = 0;
+        player.powerUp = null;
+    });
+    emitPlatformState(room);
 }
 
 function createPlatformItems(levelIndex) {

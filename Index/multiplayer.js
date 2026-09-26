@@ -9,6 +9,9 @@
   const buttonStyle = document.createElement('style');
   buttonStyle.textContent = `#home-chat{display:flex!important;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:68px;padding:14px 18px!important;white-space:nowrap}#home-chat .multiplayer-tag{flex:0 0 auto;margin-left:auto!important}#catalog-multiplayer{display:block!important;width:100%!important;min-height:112px;padding:20px!important}#catalog-multiplayer strong{display:flex;align-items:center;justify-content:space-between;gap:12px;line-height:1.5}#catalog-multiplayer .multiplayer-tag{flex:0 0 auto;margin-left:auto!important;white-space:nowrap}.multiplayer-tag{line-height:1.3;white-space:nowrap}@media(max-width:520px){#home-chat{min-height:62px;padding:12px 14px!important}#catalog-multiplayer{min-height:96px}#catalog-multiplayer strong{align-items:flex-start;flex-direction:column;gap:6px}}`;
   document.head.appendChild(buttonStyle);
+  const overlayScrollStyle = document.createElement('style');
+  overlayScrollStyle.textContent = '.mode-select-screen,.multiplayer-mod,.space-online-panel,.multiplayer-screen{overflow-x:hidden;overflow-y:auto;align-items:safe center}@media(max-width:760px){.mode-select-screen,.multiplayer-mod,.space-online-panel,.multiplayer-screen{align-items:start}}#platform-online-next{display:none!important}';
+  document.head.appendChild(overlayScrollStyle);
   const windowStyle = document.createElement('style');
   windowStyle.textContent = `.chat-widget{min-width:260px;min-height:170px;resize:both;overflow:hidden}.chat-widget.dragged{transform:none}.chat-widget.minimized{height:42px!important;min-height:42px!important;resize:none}.chat-widget.minimized>*:not(.chat-heading){display:none}.chat-widget.maximized{left:4vw!important;top:4vh!important;right:4vw!important;bottom:4vh!important;width:auto!important;height:auto!important;min-width:0;min-height:0}.chat-heading{cursor:move;user-select:none}.chat-window-actions{display:flex;gap:4px}.chat-window-actions button{min-width:30px!important;min-height:28px!important;padding:4px!important}.chat-resize-hint{position:absolute;right:3px;bottom:1px;color:#5d9f69;font-size:12px;pointer-events:none}`;
   document.head.appendChild(windowStyle);
@@ -105,6 +108,9 @@
   }
   let platformAnimation = 0;
   let platformLocal = { x: 80, y: 250, vy: 0, left: false, right: false, grounded: true };
+  let platformRoomId = null;
+  let platformLevelIndex = -1;
+  let platformTransitionPending = false;
   window.platformRemotePlayers = [];
   window.platformMultiplayerActive = false;
   function openPlatformMultiplayer() {
@@ -120,7 +126,6 @@
       document.querySelector('#platform-online-create').addEventListener('click', () => socket.emit('platform:create', { name: document.querySelector('#platform-online-name').value }));
       document.querySelector('#platform-online-join').addEventListener('click', () => socket.emit('platform:join', { roomId: document.querySelector('#platform-online-code').value, name: document.querySelector('#platform-online-name').value }));
       document.querySelector('#platform-online-start').addEventListener('click', () => { window.platformMultiplayerActive = true; socket.emit('platform:start'); startPlatformGame(); });
-      document.querySelector('#platform-online-next').addEventListener('click', () => socket.emit('platform:next-level'));
       document.querySelector('#platform-online-back').addEventListener('click', () => { window.platformMultiplayerActive = false; cancelAnimationFrame(platformAnimation); socket.emit('platform:leave'); panel.remove(); modScreen.classList.add('visible'); });
       window.addEventListener('keydown', event => { if (!window.platformMultiplayerActive) return; if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') platformLocal.left = true; if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') platformLocal.right = true; if ((event.key === ' ' || event.key.toLowerCase() === 'w' || event.key === 'ArrowUp') && platformLocal.grounded) { platformLocal.vy = -10; platformLocal.grounded = false; } });
       window.addEventListener('keyup', event => { if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') platformLocal.left = false; if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') platformLocal.right = false; });
@@ -145,6 +150,7 @@
       if (!window.platformMultiplayerActive) return;
       const platformItems = window.platformItems || [];
       const platformLevel = window.platformLevel || '1-1';
+      if (platformTransitionPending) { platformLocal.left = false; platformLocal.right = false; }
       if (platformLocal.left) platformLocal.x -= 5;
       if (platformLocal.right) platformLocal.x += 5;
       platformLocal.x = Math.max(20, Math.min(levelWidth - 20, platformLocal.x));
@@ -181,21 +187,44 @@
     if (panel) {
       document.querySelector('#platform-online-code').value = state.roomId;
       const localPlayer = state.players.find(player => player.id === socket.id);
-      document.querySelector('#platform-online-status').textContent = state.running ? `${state.level} active.` : `Room code: ${state.roomId}`;
+      document.querySelector('#platform-online-status').textContent = state.transitionPending ? `${state.level} complete. Next level in 4 seconds.` : state.running ? `${state.level} active.` : `Room code: ${state.roomId}`;
       document.querySelector('#platform-online-players').textContent = state.players.map(player => player.name).join('  /  ');
       document.querySelector('#platform-level').textContent = state.level || '1-1';
       document.querySelector('#platform-coins').textContent = String(localPlayer?.coins || 0);
       document.querySelector('#platform-power').textContent = localPlayer?.powerUp || 'ninguno';
     }
     const localPlayer = state.players.find(player => player.id === socket.id);
-    if (localPlayer && Math.abs(localPlayer.x - platformLocal.x) > 40) { platformLocal.x = localPlayer.x; platformLocal.y = localPlayer.y; platformLocal.vy = localPlayer.vy; }
+    if (localPlayer && (state.roomId !== platformRoomId || state.levelIndex !== platformLevelIndex)) {
+      platformRoomId = state.roomId;
+      platformLevelIndex = state.levelIndex;
+      platformLocal.x = localPlayer.x;
+      platformLocal.y = localPlayer.y;
+      platformLocal.vy = localPlayer.vy;
+      platformLocal.left = false;
+      platformLocal.right = false;
+    }
+    platformTransitionPending = Boolean(state.transitionPending);
     if (state.running && !window.platformMultiplayerActive) { window.platformMultiplayerActive = true; startPlatformGame(); }
   });
+  socket.on('platform:players', players => { window.platformRemotePlayers = players || []; });
   socket.on('platform:error', message => { const statusNode = document.querySelector('#platform-online-status'); if (statusNode) statusNode.textContent = message; });
+  const knownSpaceLives = new Map();
   socket.on('space:state', state => {
     const panel = document.querySelector('#space-online-panel');
+    state.players.forEach(player => {
+      const previousLives = knownSpaceLives.get(player.id);
+      if (previousLives !== undefined && player.lives < previousLives) {
+        window.dispatchEvent(new CustomEvent('space-player-damaged', { detail: { playerId: player.id } }));
+      }
+      knownSpaceLives.set(player.id, player.lives);
+    });
     window.spaceRemotePlayers = state.players;
     window.spaceLocalPlayerId = socket.id;
+    const localPlayer = state.players.find(player => player.id === socket.id);
+    if (localPlayer && (window.spaceRoomId !== state.roomId || window.spaceSpawnX === null)) {
+      window.spaceRoomId = state.roomId;
+      window.spaceSpawnX = localPlayer.x;
+    }
     if (panel) {
       document.querySelector('#space-online-code').value = state.roomId;
       document.querySelector('#space-online-status').textContent = state.running ? `Mission active. Shared score: ${state.score}` : `Room code: ${state.roomId}`;
@@ -213,8 +242,13 @@
   socket.on('space:remote-fire', event => {
     if (window.spaceMultiplayerActive && event.playerId !== socket.id) window.dispatchEvent(new CustomEvent('space-remote-fire', { detail: event }));
   });
+  let lastSpaceScoreSent = -1;
   window.addEventListener('space-score-updated', event => {
-    if (window.spaceMultiplayerActive) socket.emit('space:score', event.detail.score);
+    const score = Number(event.detail.score) || 0;
+    if (window.spaceMultiplayerActive && score !== lastSpaceScoreSent) {
+      lastSpaceScoreSent = score;
+      socket.emit('space:score', score);
+    }
   });
   window.addEventListener('space-remote-fire', event => {
     window.dispatchEvent(new CustomEvent('space-remote-bullet', { detail: event.detail }));
