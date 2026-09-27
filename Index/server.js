@@ -111,6 +111,8 @@ const server = http.createServer((req, res) => {
         ['/multiplayer.js', 'multiplayer.js'],
         ['/service-worker.js', 'service-worker.js'],
         ['/manifest.webmanifest', 'manifest.webmanifest'],
+        ['/26k Icon 256x256.ico', '26k Icon 256x256.ico'],
+        ['/26k%20Icon%20256x256.ico', '26k Icon 256x256.ico'],
         ['/convertico-captura de pantalla-32x32 (1).ico', 'convertico-captura de pantalla-32x32 (1).ico'],
         ['/05 Ruins.mp3', '05 Ruins.mp3'],
         ['/uwa-temperate.mp3', 'uwa-temperate.mp3'],

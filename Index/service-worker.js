@@ -1,10 +1,10 @@
-const CACHE_NAME = 'h3lix-calculator-v1';
+const CACHE_NAME = 'h3lix-calculator-v2';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/multiplayer.js',
   '/manifest.webmanifest',
-  '/convertico-captura%20de%20pantalla-32x32%20(1).ico'
+  '/26k%20Icon%20256x256.ico'
 ];
 
 self.addEventListener('install', event => {

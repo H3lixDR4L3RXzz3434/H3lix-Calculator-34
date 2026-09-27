@@ -10,8 +10,8 @@
   "theme_color": "#050918",
   "icons": [
     {
-      "src": "/convertico-captura%20de%20pantalla-32x32%20(1).ico",
-      "sizes": "32x32",
+      "src": "/26k%20Icon%20256x256.ico",
+      "sizes": "256x256",
       "type": "image/x-icon",
       "purpose": "any maskable"
     }
