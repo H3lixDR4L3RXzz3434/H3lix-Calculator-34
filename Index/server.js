@@ -109,6 +109,8 @@ const server = http.createServer((req, res) => {
         ['/', 'index.html'],
         ['/index.html', 'index.html'],
         ['/multiplayer.js', 'multiplayer.js'],
+        ['/service-worker.js', 'service-worker.js'],
+        ['/manifest.webmanifest', 'manifest.webmanifest'],
         ['/convertico-captura de pantalla-32x32 (1).ico', 'convertico-captura de pantalla-32x32 (1).ico'],
         ['/05 Ruins.mp3', '05 Ruins.mp3'],
         ['/uwa-temperate.mp3', 'uwa-temperate.mp3'],
@@ -131,6 +133,7 @@ const server = http.createServer((req, res) => {
             const contentType = {
                 '.html': 'text/html; charset=utf-8',
                 '.js': 'application/javascript; charset=utf-8',
+                '.webmanifest': 'application/manifest+json; charset=utf-8',
                 '.ico': 'image/x-icon',
                 '.mp3': 'audio/mpeg',
                 '.mp4': 'video/mp4'

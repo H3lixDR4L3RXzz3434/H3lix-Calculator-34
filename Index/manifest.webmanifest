@@ -1,0 +1,19 @@
+{
+  "name": "H3lix Calculator 26k",
+  "short_name": "H3lix 26k",
+  "description": "Calculators, arcade games and multiplayer experiences.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#050918",
+  "theme_color": "#050918",
+  "icons": [
+    {
+      "src": "/convertico-captura%20de%20pantalla-32x32%20(1).ico",
+      "sizes": "32x32",
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    }
+  ]
+}

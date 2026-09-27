@@ -4,6 +4,7 @@
 <head>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/multiplayer.js" defer></script>
+  <link rel="manifest" href="/manifest.webmanifest">
   
   <link rel="icon" type="image/x-icon" href="convertico-captura%20de%20pantalla-32x32%20(1).ico">
   <meta charset="UTF-8" />
@@ -16,6 +17,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('/service-worker.js'));
+    }
+  </script>
   <style>
     :root { --light: #f4f6f8; --panel: #fff; --ink: #18212b; --gold: #b27a00; --accent: #2367a8; --green: #18804b; --green-dark: #07552f; --green-light: #dff7e9; --muted: #5f6b76; --line: #d5dce3; --theme-dark: #174b7d; --theme-mid: #2367a8; --theme-soft: #edf4fb; --theme-glow: rgba(35,103,168,.25); }
     * { box-sizing: border-box; }
