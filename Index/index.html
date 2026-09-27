@@ -602,6 +602,16 @@
     .profile-inventory h3 { margin: 0 0 10px; color: #4b555d; font-size: .55rem; }
     .profile-inventory p { margin: 0 0 10px; color: var(--muted); font-size: .42rem; line-height: 1.7; }
     .inventory-theme-list { display: grid; gap: 7px; }
+    .inventory-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; margin: 12px 0; }
+    .inventory-tabs button { min-height: 40px; padding: 8px 5px; border: 2px solid var(--line); color: var(--ink); background: var(--panel); box-shadow: 2px 2px 0 var(--accent); font: .4rem 'Press Start 2P', monospace; cursor: pointer; }
+    .inventory-tabs button[aria-pressed="true"] { border-color: var(--accent); color: #fff; background: var(--accent); }
+    .inventory-view[hidden], .profile-inventory[hidden] { display: none; }
+    .profile-inventory h4 { margin: 14px 0 8px; color: var(--ink); font-size: .46rem; line-height: 1.7; }
+    .inventory-palette-list { display: grid; gap: 7px; }
+    .inventory-palette-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 0 0; border-top: 1px solid var(--line); color: var(--ink); font-size: .42rem; line-height: 1.7; }
+    .inventory-palette-item button { padding: 8px; border: 2px solid var(--line); color: var(--ink); background: var(--panel); box-shadow: 2px 2px 0 var(--accent); font: .42rem 'Press Start 2P', monospace; cursor: pointer; }
+    .inventory-space-message { padding: 14px; border: 2px dashed var(--line); color: var(--muted); text-align: center; font-size: .45rem; line-height: 1.8; }
+    .palette-swatch { display: inline-block; width: 26px; height: 26px; margin-right: 9px; border: 2px solid var(--line); background: var(--palette-swatch); vertical-align: middle; }
     .inventory-theme-list .settings-row { padding: 9px 0 0; border-top: 1px solid #d5dce3; }
     .inventory-theme-list .settings-row button { padding: 8px; border: 2px solid var(--line); border-radius: 4px; color: var(--ink); background: var(--panel); box-shadow: 2px 2px 0 var(--accent); font: .5rem 'Press Start 2P', monospace; cursor: pointer; }
     .inventory-theme-list .settings-row button:hover, .inventory-theme-list .settings-row button:focus-visible { color: var(--accent); border-color: var(--accent); outline: none; }
@@ -609,13 +619,11 @@
     .inventory-sound-list .inventory-sound { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 0 0; border-top: 1px solid #d5dce3; color: var(--ink); font-size: .42rem; line-height: 1.7; }
     .inventory-sound-list button { padding: 8px; border: 2px solid var(--line); border-radius: 4px; color: var(--ink); background: var(--panel); box-shadow: 2px 2px 0 var(--accent); font: .5rem 'Press Start 2P', monospace; cursor: pointer; }
     .inventory-sound-list button:hover, .inventory-sound-list button:focus-visible { color: var(--accent); border-color: var(--accent); outline: none; }
-    .pc-pointer-inventory { display: none; margin-top: 16px; }
-    body.pc-mode .pc-pointer-inventory { display: block; }
+    .pc-pointer-inventory { margin-top: 0; }
     .inventory-pointer-list { display: grid; gap: 7px; }
     .inventory-pointer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 0 0; border-top: 1px solid #d5dce3; color: var(--ink); font-size: .42rem; line-height: 1.7; }
     .inventory-pointer button { padding: 8px; border: 2px solid var(--line); border-radius: 4px; color: var(--ink); background: var(--panel); box-shadow: 2px 2px 0 var(--accent); font: .5rem 'Press Start 2P', monospace; cursor: pointer; }
     .inventory-pointer button:hover, .inventory-pointer button:focus-visible { color: var(--accent); border-color: var(--accent); outline: none; }
-    body.mobile-mode .pc-pointer-inventory { display: none !important; }
     body.golden-frenesi .profile-inventory { border-color: var(--line); background: var(--panel); }
     .global-records { margin-top: 16px; padding: 14px; border: 2px solid #b0b7bd; background: #fafbfc; text-align: left; }
     .global-records h3 { margin: 0 0 10px; color: #4b555d; font-size: .55rem; }
@@ -864,6 +872,19 @@
     .game-exit { display: block; width: min(280px, 100%); margin: 16px auto 0; padding: 11px 14px; border: 2px solid var(--theme-dark); border-radius: 6px; color: #fff; background: var(--theme-mid); box-shadow: 0 3px 0 var(--theme-dark); font: .5rem 'Press Start 2P', monospace; cursor: pointer; }
     .game-exit:hover, .game-exit:focus-visible { background: var(--accent); outline: none; }
     @media (max-width: 760px) { .profile-screen { align-items: start; padding: max(76px, calc(env(safe-area-inset-top) + 56px)) 16px max(28px, env(safe-area-inset-bottom)); overflow-y: auto; } .profile-content { padding: 18px; } .profile-stats { grid-template-columns: repeat(2, 1fr); } .profile-sections { grid-template-columns: 1fr; } .profile-heading { align-items: start; flex-direction: column; } .profile-heading p { text-align: left; } }
+    body.palette-red { --light: #fff0f1; --panel: #fffafa; --ink: #4b1018; --muted: #87414a; --line: #e3a9ae; --accent: #c72f45; --gold: #8d1527; --green: #d34c59; --green-dark: #791c2b; --green-light: #ffe0e2; --theme-dark: #791c2b; --theme-mid: #c72f45; --theme-soft: #ffe0e2; --theme-glow: rgba(199,47,69,.25); }
+    body.palette-orange { --light: #fff4e9; --panel: #fffaf4; --ink: #54240d; --muted: #8c5534; --line: #e8bd99; --accent: #d9651c; --gold: #9b3d0b; --green: #e08338; --green-dark: #87360e; --green-light: #ffe7d1; --theme-dark: #87360e; --theme-mid: #d9651c; --theme-soft: #ffe7d1; --theme-glow: rgba(217,101,28,.25); }
+    body.palette-yellow { --light: #fffbe1; --panel: #fffef3; --ink: #4d4108; --muted: #80732b; --line: #e3d47d; --accent: #bd9a0b; --gold: #887000; --green: #d5b52c; --green-dark: #79610a; --green-light: #fff2a8; --theme-dark: #79610a; --theme-mid: #bd9a0b; --theme-soft: #fff2a8; --theme-glow: rgba(189,154,11,.25); }
+    body.palette-green { --light: #eaf8ef; --panel: #f8fff9; --ink: #123e2b; --muted: #47745d; --line: #a8d4b7; --accent: #258454; --gold: #145b3b; --green: #42a66e; --green-dark: #145b3b; --green-light: #d2f2dd; --theme-dark: #145b3b; --theme-mid: #258454; --theme-soft: #d2f2dd; --theme-glow: rgba(37,132,84,.25); }
+    body.palette-cyan { --light: #eaf9fc; --panel: #f8feff; --ink: #103b49; --muted: #477985; --line: #a5d9e4; --accent: #1384a0; --gold: #075d77; --green: #38a9bd; --green-dark: #075d77; --green-light: #c9f1f5; --theme-dark: #075d77; --theme-mid: #1384a0; --theme-soft: #c9f1f5; --theme-glow: rgba(19,132,160,.25); }
+    body.palette-darkBlue { --light: #edf1ff; --panel: #fafbff; --ink: #172044; --muted: #58658f; --line: #bac5ea; --accent: #3f5fae; --gold: #101c48; --green: #6684dc; --green-dark: #101c48; --green-light: #d8e1ff; --theme-dark: #101c48; --theme-mid: #3f5fae; --theme-soft: #d8e1ff; --theme-glow: rgba(63,95,174,.25); }
+    body.palette-purple { --light: #f5effb; --panel: #fdfaff; --ink: #321849; --muted: #705382; --line: #d0b5e4; --accent: #8952b4; --gold: #552986; --green: #a17ac5; --green-dark: #552986; --green-light: #ead9f7; --theme-dark: #552986; --theme-mid: #8952b4; --theme-soft: #ead9f7; --theme-glow: rgba(137,82,180,.25); }
+    body.palette-pink { --light: #fff0f5; --panel: #fffafd; --ink: #4e2333; --muted: #8a5269; --line: #e8b6ca; --accent: #c55d82; --gold: #9f4764; --green: #df86a5; --green-dark: #873953; --green-light: #ffdfeb; --theme-dark: #873953; --theme-mid: #c55d82; --theme-soft: #ffdfeb; --theme-glow: rgba(197,93,130,.25); }
+    body.palette-fuchsia { --light: #fff0fa; --panel: #fffaff; --ink: #4a1238; --muted: #85466f; --line: #e8afd5; --accent: #bd3286; --gold: #83115c; --green: #e15aad; --green-dark: #83115c; --green-light: #fbd4ed; --theme-dark: #83115c; --theme-mid: #bd3286; --theme-soft: #fbd4ed; --theme-glow: rgba(189,50,134,.25); }
+    body.palette-bw { --light: #f4f4f4; --panel: #fff; --ink: #111; --muted: #555; --line: #888; --accent: #111; --gold: #000; --green: #333; --green-dark: #000; --green-light: #e6e6e6; --theme-dark: #000; --theme-mid: #333; --theme-soft: #e6e6e6; --theme-glow: rgba(0,0,0,.2); }
+    #theme-catalog-list .palette-swatch { background: var(--palette-swatch); }
+    #theme-catalog-list .sound-item > span > strong { display: inline-block; vertical-align: middle; }
+    #theme-catalog-list .sound-item > span > span:last-child { display: block; margin: 5px 0 0 35px; color: var(--muted); font-size: .4rem; }
   </style>
 </head>
 <body class="loading">
@@ -956,7 +977,7 @@
   </main>
   <script>
     const profileIndexKey = 'calculatorProfiles';
-    const profileDataKeys = ['calculatorThemePresses', 'calculatorMiniGames', 'calculatorAchievements', 'calculatorClicker', 'calculatorTargetRush', 'calculatorSpaceRewards', 'calculatorDeviceMode', 'calculatorCoins', 'calculatorSoundCatalog', 'calculatorSoundCatalogOwned', 'calculatorPointerColor', 'calculatorPointerColorsOwned', 'calculatorDailyWheelDate', 'calculatorHazardCodeUnlocked'];
+    const profileDataKeys = ['calculatorThemePresses', 'calculatorMiniGames', 'calculatorAchievements', 'calculatorClicker', 'calculatorTargetRush', 'calculatorSpaceRewards', 'calculatorDeviceMode', 'calculatorCoins', 'calculatorSoundCatalog', 'calculatorSoundCatalogOwned', 'calculatorPointerColor', 'calculatorPointerColorsOwned', 'calculatorPaletteThemesOwned', 'calculatorPaletteTheme', 'calculatorDailyWheelDate', 'calculatorHazardCodeUnlocked'];
     let profileIndex = {};
     try { profileIndex = JSON.parse(localStorage.getItem(profileIndexKey) || '{}') || {}; } catch (error) { profileIndex = {}; }
     if (!Object.keys(profileIndex).length) {
@@ -982,12 +1003,11 @@
     document.body.classList.add(deviceMode);
     function renderDeviceMode() { const mobile = document.body.classList.contains('mobile-mode'); deviceModeButton.textContent = customText(mobile ? 'mobileMode' : 'pcMode'); deviceModeButton.setAttribute('aria-pressed', mobile); deviceModeStatus.textContent = customText(mobile ? 'mobileStatus' : 'pcStatus'); }
     deviceModeButton.addEventListener('click', () => { const mobile = document.body.classList.toggle('mobile-mode'); document.body.classList.toggle('pc-mode', !mobile); profileSet('calculatorDeviceMode', mobile ? 'mobile-mode' : 'pc-mode'); renderDeviceMode(); applyPointerColor(); playModeBeep(); });
-      function moveThemesToInventory() { const profileContent = document.querySelector('#profile-screen .profile-content'); const inventory = document.createElement('section'); inventory.className = 'profile-inventory'; inventory.setAttribute('aria-labelledby', 'inventory-title'); inventory.innerHTML = '<h3 id="inventory-title">Inventario</h3><p id="inventory-description">Temas desbloqueables y objetos futuros.</p><div class="inventory-theme-list"></div><h3 id="inventory-sounds-title">Sonidos desbloqueados</h3><div class="inventory-sound-list" id="inventory-sound-list"></div>'; profileContent.querySelector('.profile-sections').after(inventory); const themeList = inventory.querySelector('.inventory-theme-list'); ['arcade-theme-row', 'stellar-theme-row', 'sunny-theme-row', 'golden-theme-row', 'hazard-theme-row', 'limbo-theme-row', 'six-seven-theme-row'].forEach(id => themeList.appendChild(document.querySelector(`#${id}`))); }
+      function moveThemesToInventory() { const profileContent = document.querySelector('#profile-screen .profile-content'); const inventory = document.createElement('section'); inventory.className = 'profile-inventory'; inventory.hidden = true; inventory.setAttribute('aria-labelledby', 'inventory-title'); inventory.innerHTML = '<h3 id="inventory-title">Inventario</h3><div class="inventory-tabs" role="group" aria-label="Inventario"><button type="button" data-inventory-tab="themes" aria-pressed="true">Temas</button><button type="button" data-inventory-tab="sounds" aria-pressed="false">Sonidos</button><button type="button" data-inventory-tab="pointer" aria-pressed="false">Puntero</button><button type="button" data-inventory-tab="space" aria-pressed="false">Space</button></div><section class="inventory-view" data-inventory-view="themes"><h4 data-inventory-label="userThemes">Temas del usuario</h4><div class="inventory-palette-list" id="inventory-palette-list"></div><h4 data-inventory-label="achievementThemes">Temas por logros</h4><div class="inventory-theme-list"></div></section><section class="inventory-view" data-inventory-view="sounds" hidden><h4 data-inventory-label="userSounds">Sonidos del usuario</h4><div class="inventory-sound-list" id="inventory-sound-list"></div></section><section class="inventory-view pc-pointer-inventory inventory-view" data-inventory-view="pointer" hidden><h4 data-inventory-label="userPointers">Punteros del usuario (solo PC)</h4><div class="inventory-pointer-list" id="inventory-pointer-list"></div></section><section class="inventory-view" data-inventory-view="space" hidden><h4>Space</h4><p class="inventory-space-message" data-inventory-label="spaceProgress">En desarrollo</p></section>'; profileContent.querySelector('.profile-sections').after(inventory); const themeList = inventory.querySelector('.inventory-theme-list'); ['arcade-theme-row', 'stellar-theme-row', 'sunny-theme-row', 'golden-theme-row', 'hazard-theme-row', 'limbo-theme-row', 'six-seven-theme-row'].forEach(id => themeList.appendChild(document.querySelector(`#${id}`))); const inventoryButton = document.createElement('button'); inventoryButton.id = 'profile-inventory-button'; inventoryButton.type = 'button'; inventoryButton.dataset.inventoryLabel = 'openInventory'; inventoryButton.textContent = 'Inventario'; profileContent.querySelector('.profile-actions-panel').prepend(inventoryButton); inventoryButton.addEventListener('click', () => { inventory.hidden = !inventory.hidden; inventoryButton.dataset.inventoryLabel = inventory.hidden ? 'openInventory' : 'closeInventory'; updateLanguage(); }); inventory.querySelectorAll('[data-inventory-tab]').forEach(button => button.addEventListener('click', () => { inventory.querySelectorAll('[data-inventory-tab]').forEach(tab => tab.setAttribute('aria-pressed', String(tab === button))); inventory.querySelectorAll('[data-inventory-view]').forEach(view => { view.hidden = view.dataset.inventoryView !== button.dataset.inventoryTab; }); })); }
     moveThemesToInventory();
-    const pointerInventorySection = document.createElement('section');
-    pointerInventorySection.className = 'pc-pointer-inventory';
-    pointerInventorySection.innerHTML = '<h3>Punteros (Solo para PC)</h3><div class="inventory-pointer-list" id="inventory-pointer-list"></div>';
-    document.querySelector('.profile-inventory').appendChild(pointerInventorySection);
+    const soundCatalogHeadings = document.querySelectorAll('#sound-catalog h2');
+    soundCatalogHeadings[0].id = 'sound-catalog-title';
+    soundCatalogHeadings[1].id = 'pointer-catalog-title';
     const savedProfileTheme = profileGet('calculatorTheme') || '';
     let savedAchievements = {};
     try { savedAchievements = JSON.parse(profileGet('calculatorAchievements') || '{}') || {}; } catch (error) { savedAchievements = {}; }
@@ -1007,6 +1027,13 @@
     const customPointer = document.querySelector('#custom-pointer');
     let timer, modeAudio, current = '', basicExpression = '', stored = null, operator = null, fresh = true;
     const pointerCatalog = { rose: { name: 'Rosa', color: '#e58b9b', price: 0 }, cyan: { name: 'Cian', color: '#54d6ff', price: 35 }, lime: { name: 'Lima', color: '#b7ef4a', price: 60 }, gold: { name: 'Dorado', color: '#ffd166', price: 90 }, violet: { name: 'Violeta', color: '#b58cff', price: 120 }, mousex: { name: 'MouseX', color: '#111827', price: 0, secret: true } };
+    const paletteThemes = { red: { name: { es: 'Rojo', en: 'Red' }, price: 350, swatch: 'linear-gradient(135deg, #8d1527 0 50%, #ff6470 50%)' }, orange: { name: { es: 'Naranja', en: 'Orange' }, price: 350, swatch: 'linear-gradient(135deg, #9b3d0b 0 50%, #ff9b38 50%)' }, yellow: { name: { es: 'Amarillo', en: 'Yellow' }, price: 350, swatch: 'linear-gradient(135deg, #887000 0 50%, #ffe45e 50%)' }, green: { name: { es: 'Verde', en: 'Green' }, price: 350, swatch: 'linear-gradient(135deg, #145b3b 0 50%, #64d69a 50%)' }, cyan: { name: { es: 'Azul cyan', en: 'Cyan blue' }, price: 350, swatch: 'linear-gradient(135deg, #075d77 0 50%, #4edcf0 50%)' }, darkBlue: { name: { es: 'Azul oscuro', en: 'Dark blue' }, price: 350, swatch: 'linear-gradient(135deg, #101c48 0 50%, #6684dc 50%)' }, purple: { name: { es: 'Morado', en: 'Purple' }, price: 350, swatch: 'linear-gradient(135deg, #552986 0 50%, #bd8aef 50%)' }, pink: { name: { es: 'Rosa', en: 'Pink' }, price: 350, swatch: 'linear-gradient(135deg, #9f4764 0 50%, #ffb6d0 50%)' }, fuchsia: { name: { es: 'Fucsia', en: 'Fuchsia' }, price: 350, swatch: 'linear-gradient(135deg, #83115c 0 50%, #f45bb8 50%)' }, bw: { name: { es: 'Blanco y negro', en: 'Black and white' }, price: 500, swatch: 'linear-gradient(135deg, #111 0 50%, #fff 50%)' } };
+    const paletteThemeClasses = Object.keys(paletteThemes).map(id => `palette-${id}`);
+    let ownedPaletteThemes = [];
+    try { ownedPaletteThemes = JSON.parse(profileGet('calculatorPaletteThemesOwned') || '[]').filter(id => paletteThemes[id]); } catch (error) { ownedPaletteThemes = []; }
+    const savedPaletteTheme = profileGet('calculatorPaletteTheme');
+    if (paletteThemes[savedPaletteTheme]) document.body.classList.add(`palette-${savedPaletteTheme}`);
+    function equipPaletteTheme(id) { if (!paletteThemes[id] || !ownedPaletteThemes.includes(id)) return; document.body.classList.remove(...paletteThemeClasses); document.body.classList.add(`palette-${id}`); profileSet('calculatorPaletteTheme', id); renderThemeCatalog(); renderThemeInventory(); }
     let ownedPointerColors = ['rose'];
     try { ownedPointerColors = JSON.parse(profileGet('calculatorPointerColorsOwned') || '["rose"]'); } catch (error) { ownedPointerColors = ['rose']; }
     function applyPointerColor() { const id = profileGet('calculatorPointerColor'); const selected = pointerCatalog[id] || pointerCatalog.rose; customPointer.classList.toggle('mousex', id === 'mousex'); customPointer.style.color = selected.color; customPointer.style.borderColor = selected.color; customPointer.style.setProperty('--pointer-color', selected.color); }
@@ -1031,6 +1058,8 @@
       };
       Object.assign(customTranslations.en, { activeProfileStatus: 'Active profile: ', saved: 'Progress saved.', profileNameRequired: 'Enter a profile name first.', exported: 'Profile exported.', simplified: 'Simplified', error: 'Error', area: 'area', sierpinski: 'Sierpinski triangle', depth: 'depth', clearGeometry: 'Choose a shape to begin.', wheelTitle: 'Daily wheel', wheelDescription: 'Spin once a day and win a surprise reward.', wheelReady: 'Your prize is waiting.', wheelBuy: 'Buy a spin to keep playing.', wheelNext: 'Next spin in', wheelAvailable: 'Daily spin available', wheelOwned: 'You have {count} purchased spins.', wheelPrize: 'Prize', welcome: 'Welcome, ', catalog: 'Catalog', rights: 'All rights reserved to Mateo Alejandro Sanchez Campillo', pickerArithmetic: 'Arithmetic calculator', pickerArithmeticDesc: 'Fast operations with numbers, percentages and keyboard.', pickerAlgebra: 'Algebraic calculator', pickerAlgebraDesc: 'Solve equations, simplify expressions and calculate derivatives.', pickerGeometry: 'Geometry and fractals', pickerGeometryDesc: 'Explore shapes, measurements and recursive fractal patterns', soundCatalog: 'Sound catalog', voidStart: 'Start' });
       Object.assign(customTranslations.es, { activeProfileStatus: 'Perfil activo: ', saved: 'Progreso guardado.', profileNameRequired: 'Escribe primero un nombre de perfil.', exported: 'Perfil exportado.', simplified: 'Simplificado', error: 'Error', area: 'área', sierpinski: 'Triángulo de Sierpinski', depth: 'profundidad', clearGeometry: 'Elige una forma para empezar.', wheelTitle: 'Ruleta diaria', wheelDescription: 'Gira una vez al día y consigue una recompensa sorpresa.', wheelReady: 'Tu premio te espera.', wheelBuy: 'Compra una girada para seguir jugando.', wheelNext: 'Próximo giro en', wheelAvailable: 'Giro diario disponible', wheelOwned: 'Tienes {count} giros compradas.', wheelPrize: 'Premio', welcome: 'Bienvenido, ', catalog: 'Catálogo', rights: 'Todos los derechos reservados a Mateo Alejandro Sanchez Campillo', pickerArithmetic: 'Calculadora aritmética', pickerArithmeticDesc: 'Operaciones rápidas con números, porcentajes y teclado.', pickerAlgebra: 'Calculadora algebraica', pickerAlgebraDesc: 'Resuelve ecuaciones, simplifica expresiones y calcula derivadas.', pickerGeometry: 'Geometría y fractales', pickerGeometryDesc: 'Explora formas, medidas y patrones fractales recursivos.', soundCatalog: 'Catálogo de sonidos', voidStart: 'Iniciar' });
+      Object.assign(customTranslations.en, { themeCatalog: 'Color themes', pointerCatalog: 'Pointer colors', openInventory: 'Inventory', closeInventory: 'Close inventory', inventoryThemes: 'Themes', inventorySounds: 'Sounds', inventoryPointer: 'Pointer', inventorySpace: 'Space', userThemes: 'Your themes', achievementThemes: 'Achievement themes', userSounds: 'Your sounds', userPointers: 'Your pointers (PC only)', spaceProgress: 'Work in progress', coinsLabel: 'coins', buy: 'Buy', equip: 'Equip', equipped: 'Equipped' });
+      Object.assign(customTranslations.es, { themeCatalog: 'Temas de color', pointerCatalog: 'Colores del puntero', openInventory: 'Inventario', closeInventory: 'Cerrar inventario', inventoryThemes: 'Temas', inventorySounds: 'Sonidos', inventoryPointer: 'Puntero', inventorySpace: 'Space', userThemes: 'Temas del usuario', achievementThemes: 'Temas por logros', userSounds: 'Sonidos del usuario', userPointers: 'Punteros del usuario (solo PC)', spaceProgress: 'En desarrollo', coinsLabel: 'monedas', buy: 'Comprar', equip: 'Equipar', equipped: 'Equipado' });
       function customText(key) { return customTranslations[language][key]; }
 
       function text(key) { return translations[language][key]; }
@@ -1053,7 +1082,12 @@
         document.querySelector('#calculator-picker .picker-content > p').textContent = custom.pickerDescription;
         const pickerCards = document.querySelectorAll('.calculator-options .calculator-card');
         [[custom.pickerArithmetic, custom.pickerArithmeticDesc], [custom.pickerAlgebra, custom.pickerAlgebraDesc], [custom.pickerGeometry, custom.pickerGeometryDesc]].forEach(([title, description], index) => { const cardText = pickerCards[index].querySelector('div:last-child'); cardText.querySelector('strong').textContent = title; cardText.querySelector('span').textContent = description; });
-        document.querySelector('#sound-catalog h2').textContent = custom.soundCatalog;
+        document.querySelector('#sound-catalog-title').textContent = custom.soundCatalog;
+        document.querySelector('#pointer-catalog-title').textContent = custom.pointerCatalog;
+        const themeCatalogTitle = document.querySelector('#theme-catalog-title'); if (themeCatalogTitle) themeCatalogTitle.textContent = custom.themeCatalog;
+        document.querySelectorAll('[data-inventory-label]').forEach(element => { element.textContent = custom[element.dataset.inventoryLabel]; });
+        document.querySelectorAll('[data-inventory-tab]').forEach(button => { button.textContent = custom[{ themes: 'inventoryThemes', sounds: 'inventorySounds', pointer: 'inventoryPointer', space: 'inventorySpace' }[button.dataset.inventoryTab]] || button.dataset.inventoryTab; });
+        const inventoryButton = document.querySelector('#profile-inventory-button'); if (inventoryButton) inventoryButton.textContent = custom[inventoryButton.dataset.inventoryLabel];
         voidStart.textContent = custom.voidStart;
         document.querySelector('#geometry-mode h2').textContent = custom.geometryTitle;
         document.querySelector('.geometry-description').textContent = custom.geometryDescription;
@@ -1421,6 +1455,32 @@
     function saveCoins() { profileSet('calculatorCoins', String(coins)); renderCoins(); }
     function renderCoins() { document.querySelector('#home-coins').textContent = coins; document.querySelector('#catalog-coins').textContent = coins; }
     function earnCoins(amount) { coins += amount; saveCoins(); }
+    function renderThemeCatalog() {
+      const content = document.querySelector('.sound-catalog-content');
+      let heading = document.querySelector('#theme-catalog-title');
+      let list = document.querySelector('#theme-catalog-list');
+      if (!heading) { heading = document.createElement('h2'); heading.id = 'theme-catalog-title'; content.insertBefore(heading, document.querySelector('#sound-catalog-list')); }
+      if (!list) { list = document.createElement('div'); list.className = 'sound-catalog-list'; list.id = 'theme-catalog-list'; content.insertBefore(list, document.querySelector('#sound-catalog-list')); }
+      heading.textContent = customText('themeCatalog');
+      list.replaceChildren();
+      Object.entries(paletteThemes).forEach(([id, theme]) => {
+        const item = document.createElement('div'); item.className = `sound-item ${profileGet('calculatorPaletteTheme') === id ? 'equipped' : ''}`;
+        const label = document.createElement('span'); const swatch = document.createElement('span'); swatch.className = 'palette-swatch'; swatch.style.setProperty('--palette-swatch', theme.swatch);
+        const name = document.createElement('strong'); name.textContent = theme.name[language]; const price = document.createElement('span'); price.textContent = `${theme.price} ${customText('coinsLabel')}`; label.append(swatch, name, price);
+        const button = document.createElement('button'); const owned = ownedPaletteThemes.includes(id); const equipped = profileGet('calculatorPaletteTheme') === id;
+        button.type = 'button'; button.textContent = equipped ? customText('equipped') : owned ? customText('equip') : customText('buy'); button.disabled = equipped || (!owned && coins < theme.price);
+        button.addEventListener('click', () => { if (!owned) { if (coins < theme.price) return; coins -= theme.price; ownedPaletteThemes.push(id); profileSet('calculatorPaletteThemesOwned', JSON.stringify(ownedPaletteThemes)); saveCoins(); } equipPaletteTheme(id); playModeBeep(); });
+        item.append(label, button); list.appendChild(item);
+      });
+    }
+    function renderThemeInventory() {
+      const list = document.querySelector('#inventory-palette-list'); if (!list) return; list.replaceChildren();
+      ownedPaletteThemes.filter(id => paletteThemes[id]).forEach(id => {
+        const item = document.createElement('div'); item.className = 'inventory-palette-item'; const label = document.createElement('span'); const swatch = document.createElement('span');
+        swatch.className = 'palette-swatch'; swatch.style.setProperty('--palette-swatch', paletteThemes[id].swatch); label.append(swatch, document.createTextNode(paletteThemes[id].name[language]));
+        const button = document.createElement('button'); const equipped = profileGet('calculatorPaletteTheme') === id; button.type = 'button'; button.textContent = equipped ? customText('equipped') : customText('equip'); button.disabled = equipped; button.addEventListener('click', () => { equipPaletteTheme(id); playModeBeep(); }); item.append(label, button); list.appendChild(item);
+      });
+    }
     function renderSoundCatalog() { const list = document.querySelector('#sound-catalog-list'); list.replaceChildren(); Object.entries(soundCatalog).forEach(([id, sound]) => { const item = document.createElement('div'); item.className = `sound-item ${profileGet('calculatorSoundCatalog') === id ? 'equipped' : ''}`; const label = document.createElement('span'); label.textContent = `${sound.name} - ${sound.price === 0 ? 'Gratis' : `${sound.price} monedas`}`; const button = document.createElement('button'); const owned = ownedSounds.includes(id); button.textContent = owned ? (profileGet('calculatorSoundCatalog') === id ? 'Equipado' : 'Equipar') : 'Comprar'; button.disabled = owned ? profileGet('calculatorSoundCatalog') === id : coins < sound.price; button.addEventListener('click', () => { if (!owned) { coins -= sound.price; ownedSounds.push(id); profileSet('calculatorSoundCatalogOwned', JSON.stringify(ownedSounds)); if (id === 'twinCannon') { const rewards = JSON.parse(profileGet('calculatorSpaceRewards') || '{}'); rewards.twinCannon = true; rewards.doubleShot = true; profileSet('calculatorSpaceRewards', JSON.stringify(rewards)); } saveCoins(); } profileSet('calculatorSoundCatalog', id); renderSoundCatalog(); playModeBeep(); }); item.append(label, button); list.appendChild(item); }); }
     function renderSoundInventory() { const list = document.querySelector('#inventory-sound-list'); if (!list) return; list.replaceChildren(); ownedSounds.filter(id => soundCatalog[id]).forEach(id => { const item = document.createElement('div'); item.className = 'inventory-sound'; const label = document.createElement('span'); label.textContent = soundCatalog[id].name; const button = document.createElement('button'); const equipped = profileGet('calculatorSoundCatalog') === id; button.type = 'button'; button.textContent = equipped ? 'Equipado' : 'Equipar'; button.disabled = equipped; button.addEventListener('click', () => { profileSet('calculatorSoundCatalog', id); renderSoundInventory(); playModeBeep(); }); item.append(label, button); list.appendChild(item); }); }
     renderCoins();
@@ -2298,6 +2358,8 @@
     document.querySelector('#profile-export-main').addEventListener('click', exportProfile);
     document.querySelector('#profile-import-main').addEventListener('click', () => document.querySelector('#profile-import').click());
     document.querySelector('#profile-close').addEventListener('click', showHome);
+    document.querySelector('#home-catalog').addEventListener('click', () => { renderThemeCatalog(); updateLanguage(); });
+    document.querySelector('#home-profile').addEventListener('click', renderThemeInventory);
     document.querySelector('#catalog-arithmetic').addEventListener('click', () => { playModeBeep(); stopCatalogMusic(); gamesCatalog.classList.remove('visible'); document.querySelector('#minigames-mode').classList.remove('visible'); document.querySelector('#minigames-button').click(); });
     document.querySelector('#catalog-relaxing').addEventListener('click', () => { playModeBeep(); stopCatalogMusic(); gamesCatalog.classList.remove('visible'); document.querySelector('#relaxing-mode').classList.remove('visible'); document.querySelector('#relaxing-button').click(); });
     document.querySelector('#catalog-clicker').addEventListener('click', () => { showGiftToast(); playModeBeep(); stopCatalogMusic(); gamesCatalog.classList.remove('visible'); document.querySelector('#standard-mode').classList.add('hidden'); document.querySelector('#algebra-mode').classList.remove('visible'); document.querySelector('#minigames-mode').classList.remove('visible'); document.querySelector('#relaxing-mode').classList.remove('visible'); document.querySelector('#space-mode').classList.remove('visible'); document.querySelector('#clicker-mode').classList.add('visible'); });
