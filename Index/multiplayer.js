@@ -104,9 +104,16 @@
       panel.className = 'space-online-panel';
       panel.innerHTML = '<div class="space-online-card"><h2>Space Invaders <span class="multiplayer-tag">MULTIPLAYER</span></h2><p class="space-online-status" id="space-online-status">Create a room or join with a code.</p><input id="space-online-name" maxlength="16" placeholder="Your name"><input id="space-online-code" maxlength="4" placeholder="Room code"><div class="space-online-actions"><button id="space-online-create" type="button">Create room</button><button id="space-online-join" type="button">Join room</button></div><p class="space-online-players" id="space-online-players"></p><div class="space-online-actions"><button id="space-online-start" type="button">Start mission</button><button id="space-online-back" type="button">Back</button></div></div>';
       document.body.appendChild(panel);
+      document.querySelector('#space-online-start').disabled = true;
       document.querySelector('#space-online-create').addEventListener('click', () => socket.emit('space:create', { name: document.querySelector('#space-online-name').value }));
       document.querySelector('#space-online-join').addEventListener('click', () => socket.emit('space:join', { roomId: document.querySelector('#space-online-code').value, name: document.querySelector('#space-online-name').value }));
-      document.querySelector('#space-online-start').addEventListener('click', () => { window.spaceMultiplayerActive = true; panel.classList.remove('visible'); socket.emit('space:start'); document.querySelector('#catalog-space').click(); });
+      document.querySelector('#space-online-start').addEventListener('click', () => {
+        if (!window.spaceRoomId || !socket.connected) return;
+        window.spaceMultiplayerActive = true;
+        panel.classList.remove('visible');
+        socket.emit('space:start');
+        document.querySelector('#catalog-space').click();
+      });
       document.querySelector('#space-online-back').addEventListener('click', () => { window.spaceMultiplayerActive = false; socket.emit('space:leave'); panel.remove(); modScreen.classList.add('visible'); });
     }
     panel.classList.add('visible');
@@ -234,6 +241,7 @@
       document.querySelector('#space-online-code').value = state.roomId;
       document.querySelector('#space-online-status').textContent = state.running ? `Mission active. Shared score: ${state.score}` : `Room code: ${state.roomId}`;
       document.querySelector('#space-online-players').textContent = state.players.map(player => player.name).join('  /  ');
+      document.querySelector('#space-online-start').disabled = !state.roomId || !state.players.length;
     }
     window.dispatchEvent(new CustomEvent('space-score-synced', { detail: { score: state.score } }));
     window.dispatchEvent(new CustomEvent('space-players-updated'));

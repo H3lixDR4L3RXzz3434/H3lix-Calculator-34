@@ -1,15 +1,16 @@
 const { Pool } = require('pg');
 
-// Database connection using Render environment variable
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
+// Database persistence is optional for local and solo deployments.
+const pool = process.env.DATABASE_URL ? new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false
+    }
+}) : null;
 
 // Initialize database table if it doesn't exist
 async function initDB() {
+    if (!pool) return;
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS players (
@@ -32,6 +33,7 @@ initDB();
 
 // Save or update player progress
 async function savePlayerProgress(playerId, username, level, coins, score, extraData = {}) {
+    if (!pool) return false;
   const query = `
     INSERT INTO players (id, username, level, coins, score, data, updated_at)
     VALUES ($1, $2, $3, $4, $5, $6, NOW())
@@ -56,6 +58,7 @@ async function savePlayerProgress(playerId, username, level, coins, score, extra
 
 // Load player progress
 async function getPlayerProgress(playerId) {
+    if (!pool) return null;
   try {
     const res = await pool.query('SELECT * FROM players WHERE id = $1', [playerId]);
     if (res.rows.length > 0) {
@@ -87,6 +90,12 @@ const spaceRooms = new Map();
 const platformRooms = new Map();
 const PLATFORM_LEVELS = ['1-1', '1-2', '2-1', '2-2'];
 
+setInterval(() => {
+    for (const room of spaceRooms.values()) {
+        if (room.running) emitSpaceState(room);
+    }
+}, 100);
+
 const server = http.createServer((req, res) => {
     let pathname;
     try {
@@ -100,7 +109,12 @@ const server = http.createServer((req, res) => {
         ['/', 'index.html'],
         ['/index.html', 'index.html'],
         ['/multiplayer.js', 'multiplayer.js'],
-        ['/convertico-captura de pantalla-32x32 (1).ico', 'convertico-captura de pantalla-32x32 (1).ico']
+        ['/convertico-captura de pantalla-32x32 (1).ico', 'convertico-captura de pantalla-32x32 (1).ico'],
+        ['/05 Ruins.mp3', '05 Ruins.mp3'],
+        ['/uwa-temperate.mp3', 'uwa-temperate.mp3'],
+        ['/06 Uwa!! So Temperate♫.mp3', '06 Uwa!! So Temperate♫.mp3'],
+        ['/Wiosna97 - cursed_church_ambience.mp3', 'Wiosna97 - cursed_church_ambience.mp3'],
+        ['/Fnaf_1_Chica_Jumpscare.mp4', 'Fnaf_1_Chica_Jumpscare.mp4']
     ]);
     const requestedPath = staticFiles.get(pathname);
     if (!requestedPath) {
@@ -114,9 +128,15 @@ const server = http.createServer((req, res) => {
             res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
             res.end('Not found');
         } else {
-            const contentType = requestedPath.endsWith('.js') ? 'application/javascript; charset=utf-8' : requestedPath.endsWith('.ico') ? 'image/x-icon' : 'text/html; charset=utf-8';
+            const contentType = {
+                '.html': 'text/html; charset=utf-8',
+                '.js': 'application/javascript; charset=utf-8',
+                '.ico': 'image/x-icon',
+                '.mp3': 'audio/mpeg',
+                '.mp4': 'video/mp4'
+            }[path.extname(requestedPath).toLowerCase()] || 'application/octet-stream';
             res.writeHead(200, { 'Content-Type': contentType });
-            res.end(content, 'utf-8');
+            res.end(content);
         }
     });
 });
@@ -251,11 +271,14 @@ io.on('connection', (socket) => {
 
     socket.on('chat:leave', () => leaveChat(socket));
 
-    socket.on('record:update', ({ name, score } = {}) => {
+    socket.on('record:update', async ({ name, score } = {}) => {
         const cleanName = String(name || 'Player').trim().slice(0, 20) || 'Player';
         const cleanScore = Math.max(0, Math.floor(Number(score) || 0));
         const previous = globalRecords.get(socket.id);
-        if (!previous || cleanScore > previous.score) globalRecords.set(socket.id, { name: cleanName, score: cleanScore, updated: Date.now() });
+        if (!previous || cleanScore > previous.score) {
+            globalRecords.set(socket.id, { name: cleanName, score: cleanScore, updated: Date.now() });
+            await savePlayerProgress(socket.id, cleanName, 1, 0, cleanScore, { source: 'global-record' });
+        }
         socket.emit('records:state', [...globalRecords.values()].sort((a, b) => b.score - a.score).slice(0, 10));
     });
 
@@ -299,7 +322,7 @@ io.on('connection', (socket) => {
         const nextX = Number(x);
         if (!Number.isFinite(nextX)) return;
         player.x = Math.max(SPACE_MIN_X, Math.min(SPACE_MAX_X, nextX));
-        socket.to(`space:${room.id}`).emit('space:state', { roomId: room.id, players: [...room.players.values()], score: room.score, running: room.running });
+        emitSpaceState(room);
     });
 
     socket.on('space:fire', x => {
@@ -308,7 +331,8 @@ io.on('connection', (socket) => {
         if (!player || player.respawning) return;
         const shotX = Number(x);
         if (Number.isFinite(shotX)) player.x = Math.max(SPACE_MIN_X, Math.min(SPACE_MAX_X, shotX));
-        socket.to(`space:${room.id}`).emit('space:remote-fire', { playerId: socket.id, x: player.x });
+        io.to(`space:${room.id}`).emit('space:remote-fire', { playerId: socket.id, x: player.x });
+        emitSpaceState(room);
     });
 
     socket.on('space:damage', () => {
@@ -359,7 +383,8 @@ io.on('connection', (socket) => {
         const player = room?.players.get(socket.id);
         if (!room || !player || !room.running) return;
         const item = room.items.find(entry => entry.id === String(id));
-        if (!item || item.collected || (kind !== 'coin' && kind !== 'powerUp')) return;
+        if (!item || item.collected || item.kind !== kind) return;
+        if (Math.abs(player.x - item.x) > 60 || Math.abs(player.y - item.y) > 90) return;
         item.collected = true;
         if (kind === 'coin') player.coins += 1;
         if (kind === 'powerUp') player.powerUp = item.type;
@@ -374,9 +399,15 @@ io.on('connection', (socket) => {
         const nextY = Number(y);
         const nextVy = Number(vy);
         if (!Number.isFinite(nextX) || !Number.isFinite(nextY) || !Number.isFinite(nextVy)) return;
+        const now = Date.now();
+        const elapsed = player.lastMoveAt ? Math.max(.04, Math.min(1, (now - player.lastMoveAt) / 1000)) : .2;
+        const maxHorizontalDistance = 240 * elapsed + 30;
+        const maxVerticalDistance = 600 * elapsed + 80;
+        if (Math.abs(nextX - player.x) > maxHorizontalDistance || Math.abs(nextY - player.y) > maxVerticalDistance) return;
         player.x = Math.max(20, Math.min(PLATFORM_MAX_X, nextX));
         player.y = Math.max(20, Math.min(PLATFORM_MAX_Y, nextY));
         player.vy = Math.max(-14, Math.min(14, nextVy));
+        player.lastMoveAt = now;
         if (player.x >= 1680 && room.levelIndex < PLATFORM_LEVELS.length - 1) {
             room.transitionPending = true;
             emitPlatformState(room);
@@ -426,7 +457,7 @@ function joinPlatformRoom(socket, roomId, name) {
     leavePlatformRoom(socket);
     const room = platformRooms.get(roomId);
     const cleanName = String(name || 'Player').trim().slice(0, 16) || 'Player';
-    room.players.set(socket.id, { id: socket.id, name: cleanName, x: 80 + room.players.size * 90, y: 250, vy: 0, coins: 0, powerUp: null });
+    room.players.set(socket.id, { id: socket.id, name: cleanName, x: 80 + room.players.size * 90, y: 250, vy: 0, coins: 0, powerUp: null, lastMoveAt: 0 });
     socket.data.platformRoomId = roomId;
     socket.join(`platform:${roomId}`);
     emitPlatformState(room);
@@ -447,6 +478,7 @@ function advancePlatformLevel(room) {
         player.y = 250;
         player.vy = 0;
         player.powerUp = null;
+        player.lastMoveAt = 0;
     });
     emitPlatformState(room);
 }
