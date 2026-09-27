@@ -5,7 +5,7 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="/multiplayer.js" defer></script>
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="icon" type="image/x-icon" href="/26k%20Icon%20256x256.ico">
+  <link rel="icon" type="image/x-icon" href="/Imagen%2026%20(1).ico">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#050918" />
@@ -894,6 +894,7 @@
     <aside class="settings-panel" id="settings-panel" aria-label="Settings">
       <h2 data-i18n="settingsTitle">Settings</h2>
       <div class="settings-row"><span data-i18n="volume">Volume</span><input id="volume" type="range" min="0" max="1" step=".01" value="1" aria-label="Volume"></div>
+      <div class="settings-row"><span id="push-notifications-label">Notificaciones para volver a jugar</span><div><button id="push-notifications-toggle" type="button" aria-describedby="push-notifications-status">Activar</button><p class="device-mode-status" id="push-notifications-status" aria-live="polite"></p></div></div>
       <div class="settings-row"><span data-i18n="theme">Theme</span><button id="theme-button" type="button" data-i18n="darkTheme">Dark theme</button></div>
       <div class="settings-row arcade-theme-option" id="arcade-theme-row"><span data-i18n="arcadeTheme">Arcade theme</span><button class="arcade-theme-button" id="arcade-theme-button" type="button" data-i18n="activateArcade">Activate</button></div>
       <div class="settings-row stellar-theme-option" id="stellar-theme-row"><span>Stellar Night</span><button class="stellar-theme-button" id="stellar-theme-button" type="button">Stellar Night</button></div>
@@ -994,6 +995,76 @@
     function profileRemove(key) { localStorage.removeItem(profileKey(key)); }
     function saveProfileIndex() { localStorage.setItem(profileIndexKey, JSON.stringify(profileIndex)); }
     function profileName() { return profileIndex[activeProfile]?.name || 'Player 1'; }
+    const pushNotificationsButton = document.querySelector('#push-notifications-toggle');
+    const pushNotificationsStatus = document.querySelector('#push-notifications-status');
+    let pushNotificationsEnabled = localStorage.getItem('calculatorPushNotificationsEnabled') === 'true';
+    let pushNotificationsConfigured = false;
+    let pushDeviceId = localStorage.getItem('calculatorPushDeviceId');
+    if (!pushDeviceId) { pushDeviceId = crypto.randomUUID(); localStorage.setItem('calculatorPushDeviceId', pushDeviceId); }
+    function updatePushNotificationControls() {
+      const language = document.documentElement.lang;
+      const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext;
+      pushNotificationsButton.disabled = !supported || !pushNotificationsConfigured;
+      pushNotificationsButton.textContent = pushNotificationsEnabled ? (language === 'es' ? 'Desactivar' : 'Turn off') : (language === 'es' ? 'Activar' : 'Turn on');
+      pushNotificationsStatus.textContent = !supported
+        ? (language === 'es' ? 'Requiere un navegador compatible y una conexión segura (HTTPS).' : 'Requires a compatible browser and a secure (HTTPS) connection.')
+        : !pushNotificationsConfigured
+          ? (language === 'es' ? 'Las notificaciones aún no están configuradas en el servidor.' : 'Push notifications are not configured on the server yet.')
+          : Notification.permission === 'denied'
+            ? (language === 'es' ? 'Permiso bloqueado en el navegador.' : 'Permission is blocked by the browser.')
+            : pushNotificationsEnabled
+              ? (language === 'es' ? 'Te enviaremos hasta 3 invitaciones para volver a jugar.' : 'We will send up to 3 invitations to come back and play.')
+              : (language === 'es' ? 'Recibe invitaciones variadas para jugar y calcular.' : 'Get varied invitations to play and calculate.');
+    }
+    function decodePushKey(encodedKey) {
+      const paddedKey = `${encodedKey}${'='.repeat((4 - encodedKey.length % 4) % 4)}`;
+      const decodedKey = atob(paddedKey.replace(/-/g, '+').replace(/_/g, '/'));
+      return Uint8Array.from(decodedKey, character => character.charCodeAt(0));
+    }
+    async function postPushDeviceActivity() {
+      if (!pushNotificationsEnabled) return;
+      try { await fetch('/api/push/activity', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId: pushDeviceId }) }); } catch (error) {}
+    }
+    fetch('/api/push/config').then(response => response.json()).then(config => {
+      pushNotificationsConfigured = Boolean(config.enabled && config.publicKey);
+      updatePushNotificationControls();
+      if (pushNotificationsEnabled) postPushDeviceActivity();
+    }).catch(() => updatePushNotificationControls());
+    pushNotificationsButton.addEventListener('click', async () => {
+      pushNotificationsButton.disabled = true;
+      try {
+        if (pushNotificationsEnabled) {
+          const registration = await navigator.serviceWorker.ready;
+          const subscription = await registration.pushManager.getSubscription();
+          if (subscription) {
+            await fetch('/api/push/subscription', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId: pushDeviceId }) });
+            await subscription.unsubscribe();
+          }
+          pushNotificationsEnabled = false;
+          localStorage.setItem('calculatorPushNotificationsEnabled', 'false');
+        } else {
+          const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+          if (permission !== 'granted') return;
+          const configResponse = await fetch('/api/push/config');
+          const config = await configResponse.json();
+          if (!config.enabled || !config.publicKey) { pushNotificationsConfigured = false; return; }
+          const registration = await navigator.serviceWorker.ready;
+          let subscription = await registration.pushManager.getSubscription();
+          if (!subscription) subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: decodePushKey(config.publicKey) });
+          const response = await fetch('/api/push/subscription', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId: pushDeviceId, subscription: subscription.toJSON() }) });
+          if (!response.ok) throw new Error('Unable to save push subscription');
+          pushNotificationsEnabled = true;
+          pushNotificationsConfigured = true;
+          localStorage.setItem('calculatorPushNotificationsEnabled', 'true');
+          await postPushDeviceActivity();
+        }
+      } catch (error) {
+        pushNotificationsStatus.textContent = document.documentElement.lang === 'es' ? 'No se pudo guardar la suscripción. Inténtalo de nuevo.' : 'Could not save the subscription. Please try again.';
+      } finally {
+        updatePushNotificationControls();
+      }
+    });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) postPushDeviceActivity(); });
     ['calculatorDevices', 'calculatorActiveDevice'].forEach(key => { localStorage.removeItem(key); Object.keys(localStorage).filter(storageKey => storageKey.endsWith(`_${key}`)).forEach(storageKey => localStorage.removeItem(storageKey)); });
     const deviceModeButton = document.querySelector('#device-mode-button');
     const deviceModeStatus = document.querySelector('#device-mode-status');

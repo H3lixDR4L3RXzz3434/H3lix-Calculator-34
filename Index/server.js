@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const webPush = require('web-push');
 
 // Database persistence is optional for local and solo deployments.
 const pool = process.env.DATABASE_URL ? new Pool({
@@ -22,6 +23,13 @@ async function initDB() {
         data JSONB DEFAULT '{}',
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+            CREATE TABLE IF NOT EXISTS push_subscriptions (
+                device_id VARCHAR(64) PRIMARY KEY,
+                subscription JSONB NOT NULL,
+                last_active_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                reminders_sent INT NOT NULL DEFAULT 0,
+                last_reminded_at TIMESTAMPTZ
+            );
     `);
     console.log('✅ Database connected and initialized in Supabase.');
   } catch (err) {
@@ -75,8 +83,131 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { Server } = require('socket.io');
+const crypto = require('crypto');
 
 const PORT = 34346;
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
+const pushSubscriptions = new Map();
+const pushEnabled = Boolean(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY);
+if (pushEnabled) webPush.setVapidDetails(process.env.VAPID_SUBJECT || 'mailto:admin@example.com', VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+
+function sendJson(res, statusCode, payload) {
+    res.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end(JSON.stringify(payload));
+}
+
+function readJsonBody(req) {
+    return new Promise((resolve, reject) => {
+        let body = '';
+        req.on('data', chunk => {
+            body += chunk;
+            if (body.length > 16384) { reject(new Error('Request body too large')); req.destroy(); }
+        });
+        req.on('end', () => {
+            try { resolve(JSON.parse(body || '{}')); } catch { reject(new Error('Invalid JSON')); }
+        });
+        req.on('error', reject);
+    });
+}
+
+async function savePushSubscription(deviceId, subscription) {
+    if (pool) {
+        await pool.query(`INSERT INTO push_subscriptions (device_id, subscription, last_active_at, reminders_sent, last_reminded_at)
+            VALUES ($1, $2, NOW(), 0, NULL)
+            ON CONFLICT (device_id) DO UPDATE SET subscription = EXCLUDED.subscription, last_active_at = NOW(), reminders_sent = 0, last_reminded_at = NULL`, [deviceId, JSON.stringify(subscription)]);
+    } else {
+        pushSubscriptions.set(deviceId, { subscription, lastActiveAt: Date.now(), remindersSent: 0, lastRemindedAt: null });
+    }
+}
+
+async function updatePushActivity(deviceId) {
+    if (pool) await pool.query('UPDATE push_subscriptions SET last_active_at = NOW(), reminders_sent = 0, last_reminded_at = NULL WHERE device_id = $1', [deviceId]);
+    else {
+        const device = pushSubscriptions.get(deviceId);
+        if (device) Object.assign(device, { lastActiveAt: Date.now(), remindersSent: 0, lastRemindedAt: null });
+    }
+}
+
+async function deletePushSubscription(deviceId) {
+    if (pool) await pool.query('DELETE FROM push_subscriptions WHERE device_id = $1', [deviceId]);
+    else pushSubscriptions.delete(deviceId);
+}
+
+async function getInactivePushSubscriptions() {
+    if (pool) {
+        const result = await pool.query('SELECT device_id, subscription, last_active_at, reminders_sent, last_reminded_at FROM push_subscriptions WHERE reminders_sent < 3 AND last_active_at < NOW() - INTERVAL \'24 hours\' AND (last_reminded_at IS NULL OR last_reminded_at < NOW() - INTERVAL \'24 hours\')');
+        return result.rows.map(row => ({ deviceId: row.device_id, subscription: row.subscription, remindersSent: row.reminders_sent }));
+    }
+    const inactiveBefore = Date.now() - 24 * 60 * 60 * 1000;
+    return [...pushSubscriptions.entries()]
+        .filter(([, device]) => device.remindersSent < 3 && device.lastActiveAt < inactiveBefore && (!device.lastRemindedAt || device.lastRemindedAt < inactiveBefore))
+        .map(([deviceId, device]) => ({ deviceId, subscription: device.subscription, remindersSent: device.remindersSent }));
+}
+
+async function markPushReminderSent(deviceId) {
+    if (pool) await pool.query('UPDATE push_subscriptions SET reminders_sent = reminders_sent + 1, last_reminded_at = NOW() WHERE device_id = $1', [deviceId]);
+    else {
+        const device = pushSubscriptions.get(deviceId);
+        if (device) { device.remindersSent += 1; device.lastRemindedAt = Date.now(); }
+    }
+}
+
+async function sendPlayReminders() {
+    if (!pushEnabled) return;
+    const messages = [
+        ['¡Te esperamos! 🎮', 'Tenemos una partida lista y cuentas que resolver 🧮✨'],
+        ['¡Hora de jugar! 🚀', 'Tus minijuegos te esperan. ¿Te echas una ronda? 🎯'],
+        ['La calculadora te extraña 🧮', 'Vuelve por unos retos rápidos y una buena racha 🔥'],
+        ['¿Una partida? 👾', 'Entra, juega un rato y supera tu próximo récord 🏆'],
+        ['¡Tu próxima misión te espera! 🌟', 'Unos cálculos, unos minijuegos y a divertirse 🎲'],
+        ['Pausa para jugar 🎮', 'Hay nuevos números que conquistar y récords que romper 💥'],
+        ['¡Vamos, tú puedes! 💡', 'Abre el juego y demuestra quién manda en los cálculos 🧠'],
+        ['Un ratito de diversión ✨', 'Te esperamos para jugar, calcular y sumar puntos 🪙']
+    ];
+    for (const device of await getInactivePushSubscriptions()) {
+        const [title, body] = messages[crypto.randomInt(messages.length)];
+        try {
+            await webPush.sendNotification(device.subscription, JSON.stringify({ title, body, url: '/' }), { TTL: 60 * 60 });
+            await markPushReminderSent(device.deviceId);
+        } catch (error) {
+            if (error.statusCode === 404 || error.statusCode === 410) await deletePushSubscription(device.deviceId);
+            else console.error('Push notification failed:', error.message);
+        }
+    }
+}
+
+async function handlePushRequest(req, res, pathname) {
+    try {
+        if (req.method === 'GET' && pathname === '/api/push/config') return sendJson(res, 200, { enabled: pushEnabled, publicKey: pushEnabled ? VAPID_PUBLIC_KEY : '' });
+        if (!['POST', 'DELETE'].includes(req.method)) return sendJson(res, 405, { error: 'Method not allowed' });
+        const origin = req.headers.origin;
+        if (origin && new URL(origin).host !== req.headers.host) return sendJson(res, 403, { error: 'Invalid origin' });
+        const body = await readJsonBody(req);
+        if (!/^[\da-f-]{36}$/i.test(body.deviceId || '')) return sendJson(res, 400, { error: 'Invalid device id' });
+        if (req.method === 'POST' && !pushEnabled) return sendJson(res, 503, { error: 'Push notifications are not configured' });
+        if (pathname === '/api/push/subscription' && req.method === 'POST') {
+            const endpoint = new URL(body.subscription?.endpoint || '');
+            if (endpoint.protocol !== 'https:' || !body.subscription?.keys?.p256dh || !body.subscription?.keys?.auth) return sendJson(res, 400, { error: 'Invalid push subscription' });
+            await savePushSubscription(body.deviceId, body.subscription);
+            return sendJson(res, 201, { saved: true });
+        }
+        if (pathname === '/api/push/subscription' && req.method === 'DELETE') {
+            await deletePushSubscription(body.deviceId);
+            return sendJson(res, 200, { removed: true });
+        }
+        if (pathname === '/api/push/activity' && req.method === 'POST') {
+            await updatePushActivity(body.deviceId);
+            return sendJson(res, 200, { updated: true });
+        }
+        return sendJson(res, 404, { error: 'Not found' });
+    } catch (error) {
+        console.error('Push request failed:', error.message);
+        return sendJson(res, 400, { error: 'Invalid push request' });
+    }
+}
+
+setInterval(() => { sendPlayReminders().catch(error => console.error('Push reminder job failed:', error.message)); }, 15 * 60 * 1000);
 const MAX_PLAYERS = 4;
 const SPACE_MIN_X = 18;
 const SPACE_MAX_X = 462;
@@ -105,12 +236,14 @@ const server = http.createServer((req, res) => {
         res.end('Bad request');
         return;
     }
+    if (pathname.startsWith('/api/push/')) { handlePushRequest(req, res, pathname); return; }
     const staticFiles = new Map([
         ['/', 'index.html'],
         ['/index.html', 'index.html'],
         ['/multiplayer.js', 'multiplayer.js'],
         ['/service-worker.js', 'service-worker.js'],
         ['/manifest.webmanifest', 'manifest.webmanifest'],
+        ['/Imagen 26 (1).ico', 'Imagen 26 (1).ico'],
         ['/26k Icon 256x256.ico', '26k Icon 256x256.ico'],
         ['/26k%20Icon%20256x256.ico', '26k Icon 256x256.ico'],
         ['/convertico-captura de pantalla-32x32 (1).ico', 'convertico-captura de pantalla-32x32 (1).ico'],

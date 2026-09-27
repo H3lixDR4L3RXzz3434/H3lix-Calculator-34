@@ -1,10 +1,10 @@
-const CACHE_NAME = 'h3lix-calculator-v2';
+const CACHE_NAME = 'h3lix-calculator-v3';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/multiplayer.js',
   '/manifest.webmanifest',
-  '/26k%20Icon%20256x256.ico'
+  '/Imagen%2026%20(1).ico'
 ];
 
 self.addEventListener('install', event => {
@@ -36,4 +36,25 @@ self.addEventListener('fetch', event => {
       })
       .catch(() => caches.match(event.request).then(response => response || caches.match('/index.html')))
   );
+});
+
+self.addEventListener('push', event => {
+  let payload = {};
+  try { payload = event.data ? event.data.json() : {}; } catch (error) {}
+  event.waitUntil(self.registration.showNotification(payload.title || '¡Te esperamos! 🎮', {
+    body: payload.body || 'Ven a jugar y calcular un rato con nosotros 🧮✨',
+    icon: '/Imagen%2026%20(1).ico',
+    badge: '/Imagen%2026%20(1).ico',
+    tag: 'calculator-play-reminder',
+    data: { url: payload.url || '/' }
+  }));
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const targetUrl = new URL(event.notification.data?.url || '/', self.location.origin).href;
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+    const client = clients.find(windowClient => windowClient.url.startsWith(self.location.origin));
+    return client ? client.focus() : self.clients.openWindow(targetUrl);
+  }));
 });
