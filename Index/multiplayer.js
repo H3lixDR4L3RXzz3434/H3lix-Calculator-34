@@ -12,6 +12,9 @@
   const homeMultiplayerStyle = document.createElement('style');
   homeMultiplayerStyle.textContent = `#home-chat,#home-multiplayer-mod{grid-column:1/-1!important;width:100%!important;min-height:58px!important;margin:0!important;padding:12px 18px!important;border-radius:8px!important;font:.65rem 'Press Start 2P',monospace!important;text-align:left;line-height:1.6;white-space:normal}#home-chat{grid-row:5!important;display:flex!important;align-items:center;justify-content:space-between;gap:12px}#home-multiplayer-mod{grid-row:6!important;display:flex!important;align-items:center;justify-content:flex-start;gap:12px;background:var(--accent)!important;border-color:var(--accent)!important;color:#fff!important;box-shadow:0 4px 0 var(--theme-dark)!important}.home-menu #home-credits,.home-menu #home-profile,.home-menu #home-settings,.home-menu #home-daily-wheel{grid-row:7!important}#home-chat .multiplayer-tag,#home-multiplayer-mod .multiplayer-tag{margin-left:auto!important;flex:0 0 auto}@media(max-width:560px){#home-chat,#home-multiplayer-mod{min-height:52px!important;padding:12px 16px!important;font-size:.52rem!important}}`;
   document.head.appendChild(homeMultiplayerStyle);
+  const universalButtonStyle = document.createElement('style');
+  universalButtonStyle.textContent = '#home-multiplayer{grid-column:1/-1!important;grid-row:5!important;width:100%!important;min-height:58px!important;margin:0!important;padding:12px 18px!important;border-radius:8px!important;border:2px solid var(--accent)!important;color:#fff!important;background:var(--accent)!important;box-shadow:0 4px 0 var(--theme-dark)!important;font:.65rem \'Press Start 2P\',monospace!important;text-align:left;cursor:pointer}#home-multiplayer:hover,#home-multiplayer:focus-visible{transform:translateY(-2px);box-shadow:0 6px 0 var(--theme-dark)!important;outline:none}#home-multiplayer .multiplayer-tag{float:right;margin-top:2px}@media(max-width:560px){#home-multiplayer{min-height:52px!important;padding:12px 16px!important;font-size:.52rem!important}}';
+  document.head.appendChild(universalButtonStyle);
   const overlayScrollStyle = document.createElement('style');
   overlayScrollStyle.textContent = '.mode-select-screen,.multiplayer-mod,.space-online-panel,.multiplayer-screen{overflow-x:hidden;overflow-y:auto;align-items:safe center}@media(max-width:760px){.mode-select-screen,.multiplayer-mod,.space-online-panel,.multiplayer-screen{align-items:start}}#platform-online-next{display:none!important}';
   document.head.appendChild(overlayScrollStyle);
@@ -24,6 +27,9 @@
   const multiplayerControlStyle = document.createElement('style');
   multiplayerControlStyle.textContent = `.mode-select-actions button,.multiplayer-mod-actions button,.multiplayer-mod-card>#mod-back,.space-online-panel button,.multiplayer-screen button{min-height:58px;padding:12px 16px;font-size:.58rem;line-height:1.7}.multiplayer-mod-actions button{min-height:64px}.multiplayer-screen input,.space-online-panel input{min-height:52px;padding:12px;font-size:.52rem;line-height:1.6}.multiplayer-copy,.multiplayer-status,.space-online-status,.space-online-players{font-size:.55rem;line-height:1.9}.room-player{font-size:.48rem;line-height:1.8}@media(max-width:560px){.mode-select-actions,.multiplayer-mod-actions{grid-template-columns:1fr}.multiplayer-content,.mode-select-card,.multiplayer-mod-card,.space-online-card{padding:18px}}`;
   document.head.appendChild(multiplayerControlStyle);
+  const multiplayerHubStyle = document.createElement('style');
+  multiplayerHubStyle.textContent = `.multiplayer-hub{position:fixed;inset:0;z-index:95;display:grid;place-items:center;padding:24px;background:var(--light);opacity:0;visibility:hidden;pointer-events:none}.multiplayer-hub.visible{opacity:1;visibility:visible;pointer-events:auto}.multiplayer-hub-card{width:min(620px,100%);padding:30px;border:3px solid var(--accent);background:var(--panel);box-shadow:8px 8px 0 var(--theme-dark);text-align:center}.multiplayer-hub-card h2{margin:0 0 10px;color:var(--accent);font-size:1rem}.multiplayer-hub-card>p{margin:0;color:var(--muted);font-size:.48rem;line-height:1.8}.multiplayer-hub-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:24px}.multiplayer-hub-option{display:grid;gap:8px;min-height:150px;padding:20px;border:3px solid var(--accent);border-radius:8px;color:var(--ink);background:var(--theme-soft);box-shadow:0 5px 0 var(--theme-dark);font: .58rem/1.6 'Press Start 2P',monospace;cursor:pointer;text-align:left;transition:transform .16s ease,box-shadow .16s ease,filter .16s ease}.multiplayer-hub-option:hover,.multiplayer-hub-option:focus-visible{transform:translateY(-5px);box-shadow:0 10px 0 var(--theme-dark);filter:brightness(1.08);outline:none}.multiplayer-hub-option strong{color:var(--accent);font-size:.7rem}.multiplayer-hub-option span{color:var(--muted);font-size:.45rem;line-height:1.9}.multiplayer-hub-icon{font-size:1.6rem}.multiplayer-hub-back{margin-top:20px;min-height:48px;padding:10px 16px;border:2px solid var(--ink);color:var(--ink);background:var(--panel);box-shadow:3px 3px 0 var(--accent);font:.5rem 'Press Start 2P',monospace;cursor:pointer}@media(max-width:560px){.multiplayer-hub-card{padding:20px}.multiplayer-hub-options{grid-template-columns:1fr}.multiplayer-hub-option{min-height:120px}}`;
+  document.head.appendChild(multiplayerHubStyle);
   function ensureMultiplayerUI() {
     if (!document.querySelector('#mode-select-screen')) {
       const modeScreen = document.createElement('section');
@@ -68,6 +74,23 @@
       button.hidden = true;
       document.querySelector('.home-menu')?.appendChild(button);
     }
+    document.querySelector('#home-chat').hidden = true;
+    document.querySelector('#home-multiplayer-mod').hidden = true;
+    if (!document.querySelector('#home-multiplayer')) {
+      const button = document.createElement('button');
+      button.id = 'home-multiplayer';
+      button.type = 'button';
+      button.className = 'multiplayer-mod-menu-button';
+      button.innerHTML = 'Multiplayer <span class="multiplayer-tag">ONLINE</span>';
+      document.querySelector('.home-menu')?.appendChild(button);
+    }
+    if (!document.querySelector('#multiplayer-hub')) {
+      const hub = document.createElement('section');
+      hub.id = 'multiplayer-hub';
+      hub.className = 'multiplayer-hub';
+      hub.innerHTML = '<div class="multiplayer-hub-card"><p class="mode-kicker">H3LIX ONLINE</p><h2>Multiplayer</h2><p>Elige una forma de jugar online.</p><div class="multiplayer-hub-options"><button class="multiplayer-hub-option" id="hub-chat" type="button"><span class="multiplayer-hub-icon" aria-hidden="true">▣</span><strong>Chat</strong><span>Habla con otros jugadores usando una sala privada.</span></button><button class="multiplayer-hub-option" id="hub-games" type="button"><span class="multiplayer-hub-icon" aria-hidden="true">◆</span><strong>Minijuegos multijugador</strong><span>Compite o coopera en Neon Arena, Space Invaders y Platformer.</span></button></div><button class="multiplayer-hub-back" id="hub-back" type="button">Volver al menú</button></div>';
+      document.body.appendChild(hub);
+    }
     if (!document.querySelector('#chat-widget')) {
       const widget = document.createElement('section');
       widget.className = 'chat-widget';
@@ -81,18 +104,23 @@
   const modeScreen = document.querySelector('#mode-select-screen');
   const modeStatus = document.querySelector('#mode-select-status');
   const modScreen = document.querySelector('#multiplayer-mod');
+  const multiplayerHub = document.querySelector('#multiplayer-hub');
   const homeScreen = document.querySelector('#home-screen');
   let modeChosen = false;
   let soloModeSelected = false;
   homeScreen.classList.remove('visible');
   document.querySelector('#mode-solo').addEventListener('click', () => { modeChosen = true; soloModeSelected = true; modeScreen.classList.remove('visible'); homeScreen.classList.add('visible'); setOnlineVisibility(false); });
   document.querySelector('#mode-multiplayer').addEventListener('click', () => { modeChosen = true; soloModeSelected = false; modeScreen.classList.remove('visible'); homeScreen.classList.add('visible'); setOnlineVisibility(true); });
+  document.querySelector('#home-multiplayer').addEventListener('click', () => { multiplayerHub.classList.add('visible'); homeScreen.classList.remove('visible'); });
+  document.querySelector('#hub-chat').addEventListener('click', () => { multiplayerHub.classList.remove('visible'); homeScreen.classList.add('visible'); document.querySelector('#home-chat').click(); });
+  document.querySelector('#hub-games').addEventListener('click', () => { multiplayerHub.classList.remove('visible'); homeScreen.classList.remove('visible'); modScreen.classList.add('visible'); });
+  document.querySelector('#hub-back').addEventListener('click', () => { multiplayerHub.classList.remove('visible'); homeScreen.classList.add('visible'); });
   document.querySelector('#home-multiplayer-mod').addEventListener('click', () => { modScreen.classList.add('visible'); homeScreen.classList.remove('visible'); });
   document.querySelector('#mod-back').addEventListener('click', () => { modScreen.classList.remove('visible'); homeScreen.classList.add('visible'); });
   document.querySelector('#mod-neon').addEventListener('click', () => { modScreen.classList.remove('visible'); document.querySelector('#catalog-multiplayer').click(); });
   document.querySelector('#mod-space').addEventListener('click', () => openSpaceMultiplayer());
   document.querySelector('#mod-platform').addEventListener('click', () => openPlatformMultiplayer());
-  const setOnlineVisibility = visible => { document.querySelector('#home-multiplayer-mod').hidden = !visible; document.querySelector('#home-chat').hidden = !visible; document.querySelector('#catalog-multiplayer').hidden = !visible; };
+  const setOnlineVisibility = visible => { document.querySelector('#home-multiplayer').hidden = !visible; document.querySelector('#home-multiplayer-mod').hidden = true; document.querySelector('#home-chat').hidden = true; document.querySelector('#catalog-multiplayer').hidden = !visible; };
   const showOnlineMode = () => { if (modeChosen) { setOnlineVisibility(!soloModeSelected); return; } modeStatus.textContent = 'Server detected. Choose your mode.'; document.querySelector('#mode-multiplayer').hidden = false; setOnlineVisibility(true); modeScreen.classList.add('visible'); };
   const showSoloMode = () => { if (modeChosen) { setOnlineVisibility(false); return; } modeStatus.textContent = 'Solo mode available.'; document.querySelector('#mode-multiplayer').hidden = true; setOnlineVisibility(false); modeScreen.classList.add('visible'); };
   socket.on('connect', showOnlineMode);
