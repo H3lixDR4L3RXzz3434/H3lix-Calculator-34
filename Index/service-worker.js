@@ -1,10 +1,10 @@
-const CACHE_NAME = 'h3lix-calculator-v3';
+const CACHE_NAME = 'h3lix-calculator-v4';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/multiplayer.js',
   '/manifest.webmanifest',
-  '/Imagen%2026%20(1).ico'
+  '/unnamed.ico'
 ];
 
 self.addEventListener('install', event => {
@@ -43,8 +43,8 @@ self.addEventListener('push', event => {
   try { payload = event.data ? event.data.json() : {}; } catch (error) {}
   event.waitUntil(self.registration.showNotification(payload.title || '¡Te esperamos! 🎮', {
     body: payload.body || 'Ven a jugar y calcular un rato con nosotros 🧮✨',
-    icon: '/Imagen%2026%20(1).ico',
-    badge: '/Imagen%2026%20(1).ico',
+    icon: '/unnamed.ico',
+    badge: '/unnamed.ico',
     tag: 'calculator-play-reminder',
     data: { url: payload.url || '/' }
   }));
