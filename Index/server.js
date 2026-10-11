@@ -243,6 +243,7 @@ const server = http.createServer((req, res) => {
         ['/multiplayer.js', 'multiplayer.js'],
         ['/service-worker.js', 'service-worker.js'],
         ['/manifest.webmanifest', 'manifest.webmanifest'],
+        ['/unnamed.ico', 'unnamed.ico'],
         ['/Imagen 26 (1).ico', 'Imagen 26 (1).ico'],
         ['/26k Icon 256x256.ico', '26k Icon 256x256.ico'],
         ['/26k%20Icon%20256x256.ico', '26k Icon 256x256.ico'],
