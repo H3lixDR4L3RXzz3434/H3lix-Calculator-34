@@ -346,7 +346,7 @@ function leaveSpaceRoom(socket) {
     if (room) {
         room.players.delete(socket.id);
         if (!room.players.size) spaceRooms.delete(roomId);
-        else io.to(`space:${roomId}`).emit('space:state', { roomId, players: [...room.players.values()], score: room.score, running: room.running });
+        else emitSpaceState(room);
     }
     socket.leave(`space:${roomId}`);
     socket.data.spaceRoomId = null;
@@ -426,7 +426,7 @@ io.on('connection', (socket) => {
     socket.on('space:create', ({ name } = {}) => {
         leaveSpaceRoom(socket);
         const roomId = createSpaceRoomId();
-        spaceRooms.set(roomId, { id: roomId, players: new Map(), score: 0, running: false });
+        spaceRooms.set(roomId, { id: roomId, players: new Map(), score: 0, running: false, ...newSpaceWorld(1) });
         joinSpaceRoom(socket, roomId, name);
     });
 
@@ -442,7 +442,8 @@ io.on('connection', (socket) => {
         const room = spaceRooms.get(socket.data.spaceRoomId);
         if (!room) return;
         room.running = true;
-        io.to(`space:${room.id}`).emit('space:state', { roomId: room.id, players: [...room.players.values()], score: room.score, running: true });
+        startSpaceWorld(room, 1);
+        emitSpaceState(room);
     });
 
     socket.on('space:score', score => {
@@ -451,7 +452,7 @@ io.on('connection', (socket) => {
         const nextScore = Math.max(0, Math.floor(Number(score) || 0));
         if (nextScore <= room.score) return;
         room.score = nextScore;
-        io.to(`space:${room.id}`).emit('space:state', { roomId: room.id, players: [...room.players.values()], score: room.score, running: room.running });
+        emitSpaceState(room);
     });
 
     socket.on('space:move', x => {
@@ -477,19 +478,34 @@ io.on('connection', (socket) => {
     socket.on('space:damage', () => {
         const room = spaceRooms.get(socket.data.spaceRoomId);
         const player = room?.players.get(socket.id);
-        if (!player || player.respawning) return;
-        player.lives -= 1;
-        if (player.lives <= 0) {
-            player.respawning = true;
-            setTimeout(() => {
-                const activeRoom = spaceRooms.get(socket.data.spaceRoomId);
-                const activePlayer = activeRoom?.players.get(socket.id);
-                if (!activePlayer) return;
-                activePlayer.lives = 5;
-                activePlayer.respawning = false;
-                emitSpaceState(activeRoom);
-            }, 2000);
+        if (!room || !player) return;
+        damageSpacePlayer(room, player);
+        emitSpaceState(room);
+    });
+
+    // Un enemigo fue destruido por un jugador: el servidor decide y avisa a todos.
+    socket.on('space:kill', index => {
+        const room = spaceRooms.get(socket.data.spaceRoomId);
+        if (!room || !room.running) return;
+        const invader = room.invaders[Number(index)];
+        if (!invader || !invader.alive) return;
+        invader.alive = false;
+        if (Math.random() < 0.18) {
+            const type = ['rapid', 'shield', 'triple'][Math.floor(Math.random() * 3)];
+            room.powerUps.push({ id: room.nextPowerId++, x: invader.x, y: invader.y, type, label: SPACE_POWER[type][0], color: SPACE_POWER[type][1] });
         }
+        if (!room.invaders.some(item => item.alive)) startSpaceWorld(room, room.level + 1);
+        emitSpaceState(room);
+    });
+
+    // Recoger un power-up: solo el primero que llega lo consigue.
+    socket.on('space:pickup', id => {
+        const room = spaceRooms.get(socket.data.spaceRoomId);
+        if (!room || !room.running) return;
+        const index = room.powerUps.findIndex(item => item.id === Number(id));
+        if (index < 0) return;
+        const [powerUp] = room.powerUps.splice(index, 1);
+        socket.emit('space:pickup-ok', { id: powerUp.id, type: powerUp.type });
         emitSpaceState(room);
     });
 
@@ -587,19 +603,83 @@ function joinSpaceRoom(socket, roomId, name) {
     emitSpaceState(room);
 }
 
-// Las posiciones se agrupan y se envian 20 veces por segundo en vez de una vez por cada movimiento.
+// SPACE_WORLD_BEGIN
+const SPACE_W = 480;
+const SPACE_SYMBOLS = ['+', '-', '×', '÷'];
+const SPACE_POWER = { rapid: ['R', '#5bbcff'], shield: ['S', '#78e08f'], triple: ['3', '#ffd34f'] };
 const spaceDirtyRooms = new Set();
+
+function makeSpaceInvaders(level) {
+    const rows = Math.min(3 + level, 6);
+    const columns = Math.min(6 + level, 10);
+    const list = [];
+    for (let row = 0; row < rows; row++) {
+        for (let column = 0; column < columns; column++) {
+            list.push({ id: list.length, x: 48 + column * 42, y: 42 + row * 30, alive: true, symbol: SPACE_SYMBOLS[row % 4] });
+        }
+    }
+    return list;
+}
+
+function newSpaceWorld(level) {
+    return { level, invaders: makeSpaceInvaders(level), powerUps: [], direction: 1, nextPowerId: 1 };
+}
+
+function startSpaceWorld(room, level) {
+    Object.assign(room, newSpaceWorld(level));
+}
+
+// Cada 100 ms mueve enemigos y power-ups una sola vez para todos los jugadores.
+function stepSpaceWorld(room) {
+    const alive = room.invaders.filter(item => item.alive);
+    if (!alive.length) {
+        startSpaceWorld(room, room.level + 1);
+        return;
+    }
+    const step = (0.45 + room.level * 0.06) * 6;
+    if (alive.some(item => item.x > SPACE_W - 24 || item.x < 24)) {
+        room.direction *= -1;
+        alive.forEach(item => { item.y += 9 + Math.min(room.level, 3); });
+    }
+    alive.forEach(item => { item.x += room.direction * step; });
+    if (alive.some(item => item.y > 310)) {
+        [...room.players.values()].forEach(player => damageSpacePlayer(room, player));
+        room.invaders = makeSpaceInvaders(room.level);
+    }
+    room.powerUps.forEach(item => { item.y += 1.4 * 6; });
+    room.powerUps = room.powerUps.filter(item => item.y < 360);
+}
+
+function damageSpacePlayer(room, player) {
+    if (player.respawning) return;
+    player.lives -= 1;
+    if (player.lives > 0) return;
+    player.respawning = true;
+    setTimeout(() => {
+        player.lives = 5;
+        player.respawning = false;
+        if (spaceRooms.get(room.id) === room) emitSpaceState(room);
+    }, 2000);
+}
+
+let spaceTick = 0;
 setInterval(() => {
-    for (const roomId of spaceDirtyRooms) {
-        const room = spaceRooms.get(roomId);
-        if (room) emitSpaceState(room);
+    spaceTick++;
+    for (const room of spaceRooms.values()) {
+        if (room.running && spaceTick % 2 === 0) {
+            stepSpaceWorld(room);
+            emitSpaceState(room);
+        } else if (spaceDirtyRooms.has(room.id)) {
+            emitSpaceState(room);
+        }
     }
     spaceDirtyRooms.clear();
 }, 50);
+// SPACE_WORLD_END
 
 function emitSpaceState(room) {
     const playersData = [...room.players.values()];
-    io.to(`space:${room.id}`).emit('space:state', { roomId: room.id, players: playersData, score: room.score, running: room.running });
+    io.to(`space:${room.id}`).emit('space:state', { roomId: room.id, players: playersData, score: room.score, running: room.running, world: { level: room.level, invaders: room.invaders, powerUps: room.powerUps } });
 }
 
 function joinPlatformRoom(socket, roomId, name) {

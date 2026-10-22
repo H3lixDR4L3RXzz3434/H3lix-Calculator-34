@@ -283,6 +283,7 @@
       knownSpaceLives.set(player.id, player.lives);
     });
     window.spaceRemotePlayers = state.players;
+    window.spaceWorld = state.world || null;
     window.spaceLocalPlayerId = socket.id;
     const localPlayer = state.players.find(player => player.id === socket.id);
     if (localPlayer && (window.spaceRoomId !== state.roomId || window.spaceSpawnX === null)) {
@@ -304,6 +305,7 @@
     }
   });
   socket.on('space:error', message => { const statusNode = document.querySelector('#space-online-status'); if (statusNode) statusNode.textContent = message; });
+  socket.on('space:pickup-ok', detail => { window.dispatchEvent(new CustomEvent('space-pickup-ok', { detail })); });
   socket.on('space:remote-fire', event => {
     if (window.spaceMultiplayerActive && event.playerId !== socket.id) window.dispatchEvent(new CustomEvent('space-remote-fire', { detail: event }));
   });
