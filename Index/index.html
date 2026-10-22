@@ -1770,6 +1770,8 @@
     window.spaceRoomId = null;
     window.spaceSpawnX = null;
     window.spaceDamageFlashUntil = {};
+    const remoteDrawX = {};
+    function smoothRemoteX(player) { const target = Number(player.x) || 240; const current = remoteDrawX[player.id] ?? target; const next = current + (target - current) * 0.35; remoteDrawX[player.id] = next; return next; }
     window.addEventListener('space-player-damaged', event => { window.spaceDamageFlashUntil[event.detail.playerId] = performance.now() + 700; });
     window.addEventListener('space-remote-fire', event => { if (window.spaceMultiplayerActive) space.remoteBullets.push({ x: Number(event.detail.x) || 240, y: 330 }); });
     window.addEventListener('space-score-updated', event => { if (window.spaceMultiplayerActive) space.score = Math.max(space.score, Number(event.detail.score) || 0); });
@@ -1800,7 +1802,7 @@
       spaceContext.fillStyle = accent; spaceContext.fillRect(space.playerX - 14, 338, 28, 8); spaceContext.fillRect(space.playerX - 5, 328, 10, 10); if (space.tripleUntil > performance.now()) { spaceContext.fillRect(space.playerX - 17, 326, 4, 14); spaceContext.fillRect(space.playerX + 13, 326, 4, 14); } if (space.shieldUntil > performance.now()) { spaceContext.strokeStyle = '#78e08f'; spaceContext.lineWidth = 3; spaceContext.beginPath(); spaceContext.arc(space.playerX, 334, 24, 0, Math.PI * 2); spaceContext.stroke(); }
       const remotePlayers = Array.isArray(window.spaceRemotePlayers) ? window.spaceRemotePlayers : [];
       const shipColors = ['#5bbcff', '#ff6565', '#ffd34f', '#78e08f'];
-      remotePlayers.forEach((player, index) => { if (player.id === window.spaceLocalPlayerId || player.respawning) return; const x = Number(player.x) || 240; spaceContext.fillStyle = shipColors[index % shipColors.length]; spaceContext.fillRect(x - 12, 338, 24, 7); spaceContext.fillRect(x - 4, 329, 8, 10); spaceContext.font = '8px "Press Start 2P", monospace'; spaceContext.fillText(String(player.name).slice(0, 10), x, 320); spaceContext.fillText(`HP ${player.lives}`, x, 312); });
+      remotePlayers.forEach((player, index) => { if (player.id === window.spaceLocalPlayerId || player.respawning) return; const x = smoothRemoteX(player); spaceContext.fillStyle = shipColors[index % shipColors.length]; spaceContext.fillRect(x - 12, 338, 24, 7); spaceContext.fillRect(x - 4, 329, 8, 10); spaceContext.font = '8px "Press Start 2P", monospace'; spaceContext.fillText(String(player.name).slice(0, 10), x, 320); spaceContext.fillText(`HP ${player.lives}`, x, 312); });
       remotePlayers.forEach(player => { if (player.id === window.spaceLocalPlayerId || player.respawning || (window.spaceDamageFlashUntil[player.id] || 0) < performance.now()) return; spaceContext.fillStyle = '#ff5964'; spaceContext.font = '8px "Press Start 2P", monospace'; spaceContext.fillText('HIT!', Number(player.x) || 240, 300); });
       spaceContext.font = '18px "Press Start 2P", monospace'; spaceContext.textAlign = 'center';
       space.invaders.forEach(invader => { if (invader.alive) { spaceContext.fillStyle = gold; spaceContext.fillText(invader.symbol, invader.x, invader.y); } });

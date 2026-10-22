@@ -461,7 +461,7 @@ io.on('connection', (socket) => {
         const nextX = Number(x);
         if (!Number.isFinite(nextX)) return;
         player.x = Math.max(SPACE_MIN_X, Math.min(SPACE_MAX_X, nextX));
-        emitSpaceState(room);
+        spaceDirtyRooms.add(room.id);
     });
 
     socket.on('space:fire', x => {
@@ -586,6 +586,16 @@ function joinSpaceRoom(socket, roomId, name) {
     socket.join(`space:${roomId}`);
     emitSpaceState(room);
 }
+
+// Las posiciones se agrupan y se envian 20 veces por segundo en vez de una vez por cada movimiento.
+const spaceDirtyRooms = new Set();
+setInterval(() => {
+    for (const roomId of spaceDirtyRooms) {
+        const room = spaceRooms.get(roomId);
+        if (room) emitSpaceState(room);
+    }
+    spaceDirtyRooms.clear();
+}, 50);
 
 function emitSpaceState(room) {
     const playersData = [...room.players.values()];
